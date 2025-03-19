@@ -1,37 +1,62 @@
 import { useState } from "react";
-import { FaUser, FaLock, FaEnvelope } from "react-icons/fa";
+import { FaLock, FaEnvelope } from "react-icons/fa";
 import { useDispatch, useSelector } from "react-redux";
-import { loginUser, registerUser } from "../store/authSlice";
+import { loginUser } from "../store/authSlice";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [username, setUsername] = useState(""); // Chỉ dùng khi đăng ký
+  const [otp, setOtp] = useState("");
+  const [isOtpSent, setIsOtpSent] = useState(false);
   const dispatch = useDispatch();
-  const { loading, error } = useSelector((state) => state.auth); // Lấy trạng thái từ Redux
+  const { loading, error } = useSelector((state) => state.auth);
   const navigate = useNavigate();
 
+  const handleSendOtp = async () => {
+    if (!email) {
+      alert("Please enter an email address.");
+      return;
+    }
+    try {
+      console.log("Sending send-otp request:", { email });
+      const response = await axios.post("http://localhost:5116/api/auth/send-otp", { email });
+      console.log("Send-otp response:", response.data);
+      if (response.status === 200) {
+        setIsOtpSent(true);
+        alert("OTP sent to your email. Please check your inbox.");
+      }
+    } catch (err) {
+      console.error("Failed to send OTP:", err.response?.data || err.message);
+      alert("Failed to send OTP: " + (err.response?.data || err.message));
+    }
+  };
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       if (isLogin) {
-        // Đăng nhập
         await dispatch(loginUser({ email, password })).unwrap();
         navigate("/");
       } else {
-        // Đăng ký
-        await dispatch(registerUser({ username, password })).unwrap();
-        navigate("/");
+        if (!isOtpSent) {
+          alert("Please send OTP first.");
+          return;
+        }
+        const response = await axios.post("http://localhost:5116/api/auth/verify-otp", {
+          email,
+          password,
+          otp,
+        });
+        if (response.status === 200) {
+          await dispatch(loginUser({ email, password })).unwrap();
+          navigate("/");
+        }
       }
     } catch (err) {
-      console.error(`${isLogin ? "Login" : "Register"} failed:`, err);
-      alert(
-        isLogin
-          ? "Login failed: Invalid credentials"
-          : "Register failed: Username may already exist"
-      );
+      alert("Invalid OTP or registration failed: " + (err.response?.data || err.message));
     }
   };
 
@@ -42,20 +67,6 @@ export default function AuthPage() {
           {isLogin ? "Sign In" : "Sign Up"}
         </h2>
         <form onSubmit={handleSubmit}>
-          {!isLogin && (
-            <div className="mb-4">
-              <label className="flex items-center gap-2">
-                <FaUser />
-                <input
-                  type="text"
-                  placeholder="Username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-gray-700 p-2 rounded focus:outline-none focus:ring-2 focus:ring-gray-500"
-                />
-              </label>
-            </div>
-          )}
           <div className="mb-4">
             <label className="flex items-center gap-2">
               <FaEnvelope />
@@ -65,6 +76,7 @@ export default function AuthPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-gray-700 p-2 rounded focus:outline-none focus:ring-2 focus:ring-gray-500"
+                required
               />
             </label>
           </div>
@@ -77,12 +89,38 @@ export default function AuthPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-gray-700 p-2 rounded focus:outline-none focus:ring-2 focus:ring-gray-500"
+                required
               />
             </label>
           </div>
+          {!isLogin && (
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-[150px]">
+                <label className="flex items-center gap-2">
+                  <FaLock />
+                  <input
+                    type="text"
+                    placeholder="Enter OTP"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    className="w-full bg-gray-700 p-2 rounded focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    required
+                  />
+                </label>
+              </div>
+              <button
+                type="button"
+                onClick={handleSendOtp}
+                disabled={loading || isOtpSent} // Vô hiệu hóa sau khi gửi
+                className="bg-yellow-600 text-white px-4 py-2 rounded-2xl hover:bg-orange-500 disabled:bg-gray-500"
+              >
+                Send OTP
+              </button>
+            </div>
+          )}
           <button
             type="submit"
-            disabled={loading} // Vô hiệu hóa khi đang xử lý
+            disabled={loading}
             className="w-full bg-white text-gray-900 hover:bg-gray-300 py-2 rounded-full disabled:bg-gray-500"
           >
             {loading ? "Processing..." : isLogin ? "Login" : "Register"}
@@ -92,12 +130,20 @@ export default function AuthPage() {
               {isLogin ? "Invalid credentials" : "Registration failed"}
             </p>
           )}
+          {!isLogin && isOtpSent && (
+            <p className="text-green-500 text-center mt-2">
+              OTP sent to your email. Please check your inbox.
+            </p>
+          )}
         </form>
         <p className="text-center mt-4 text-gray-400">
           {isLogin ? "Don't have an account?" : "Already have an account?"}
           <span
             className="text-gray-200 cursor-pointer hover:underline ml-1"
-            onClick={() => setIsLogin(!isLogin)}
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setIsOtpSent(false); // Reset khi chuyển form
+            }}
           >
             {isLogin ? "Sign Up" : "Sign In"}
           </span>
