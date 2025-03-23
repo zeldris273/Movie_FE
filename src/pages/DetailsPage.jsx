@@ -1,153 +1,231 @@
-import React, { useState } from 'react'
-import { useParams } from 'react-router-dom'
-import useFetchDetails from '../hooks/useFetchDetails'
-import useFetch from '../hooks/useFetch'
-import { useSelector } from 'react-redux'
-import moment from 'moment'
-import Divider from '../components/Divider'
-import HorizontalScrollCard from '../components/HorizontalScrollCard'
-import VideoPlay from '../components/VideoPlay'
+import React, { useState } from "react";
+import { useParams } from "react-router-dom";
+import useFetchDetails from "../hooks/useFetchDetails";
+import useFetch from "../hooks/useFetch";
+import { useSelector } from "react-redux";
+import moment from "moment";
+import Divider from "../components/Divider";
+import HorizontalScrollCard from "../components/HorizontalScrollCard";
+import VideoPlay from "../components/VideoPlay";
+import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
+import "react-circular-progressbar/dist/styles.css";
 
 const DetailsPage = () => {
-  const params = useParams()
-  const imageURL = useSelector(state => state.movieData.imageURL)
-  const { data } = useFetchDetails(`/${params?.explore}/${params?.id}`)
-  const { data: castData } = useFetchDetails(`/${params?.explore}/${params?.id}/credits`)
-  const { data: similarData } = useFetch(`/${params?.explore}/${params?.id}/similar`)
-  const { data: recommendationData } = useFetch(`/${params?.explore}/${params?.id}/recommendations`)
-  const [playVideo, setPlayVideo] = useState(false)
-  const [playVideoId, setPlayVideoId] = useState("")
+  const params = useParams();
+  const imageURL = useSelector((state) => state.movieData.imageURL);
+  const { data } = useFetchDetails(`/${params?.explore}/${params?.id}`);
+  const { data: castData } = useFetchDetails(
+    `/${params?.explore}/${params?.id}/credits`
+  );
+  const { data: similarData } = useFetch(
+    `/${params?.explore}/${params?.id}/similar`
+  );
+  const { data: recommendationData } = useFetch(
+    `/${params?.explore}/${params?.id}/recommendations`
+  );
+  const [playVideo, setPlayVideo] = useState(false);
+  const [playVideoId, setPlayVideoId] = useState("");
 
-  // console.log("data: ", data)
-  // console.log("start cast: ", castData)
+  console.log("data: ", data);
+  console.log("start cast: ", castData)
 
-  const duration = (data?.runtime / 60)?.toFixed(1).split(".")
-  const writer = castData?.crew?.filter(el => el?.job === "Writer").map(el => el?.name).join(", ")
-  console.log(writer)
+  const duration = (data?.runtime / 60)?.toFixed(1).split(".");
+  const writer = castData?.crew
+    ?.filter((el) => el?.job === "Writer")
+    .map((el) => el?.name)
+    .join(", ");
+  console.log(writer);
 
   const handlePlayVideo = (data) => {
-    setPlayVideoId(data)
-    setPlayVideo(true)
-  }
+    setPlayVideoId(data);
+    setPlayVideo(true);
+  };
 
   return (
     <div>
-      <div className='w-full h-[280px] relative hidden lg:block'>
-        <div className='w-full h-full'>
+      <div className="w-full h-[280px] relative hidden lg:block">
+        <div className="w-full h-full">
           <img
             src={imageURL + data?.backdrop_path}
-            className='h-full w-full object-cover'
+            className="h-full w-full object-cover"
           />
         </div>
-        <div className='absolute w-full h-full top-0 bg-gradient-to-t from-neutral-900/90 to-transparent'></div>
+        <div className="absolute w-full h-full top-0 bg-gradient-to-t from-neutral-900/90 to-transparent"></div>
       </div>
 
-      <div className='container mx-auto px-3 py-20 lg:py-0 flex flex-col lg:flex-row gap-5 lg:gap-10'>
-        <div className='relative mx-auto w-fit lg:-mt-28 lg:mx-0 min-w-60'>
+      <div className="container mx-auto px-3 py-20 lg:py-0 flex flex-col lg:flex-row gap-5 lg:gap-10">
+        <div className="relative mx-auto w-fit lg:-mt-28 lg:mx-0 min-w-60">
           <img
             src={imageURL + data?.poster_path}
-            className='h-80 w-60 object-cover rounded'
+            className="h-80 w-60 object-cover rounded"
           />
-          <button onClick={() => handlePlayVideo(data)} className='mt-5 w-full py-2 px-4 text-center bg-white text-black rounded font-bold text-lg hover:bg-gradient-to-l from-red-500 to-orange-500 hover:scale-105 transition-all'>Play Now</button>
+          <button
+            onClick={() => handlePlayVideo(data)}
+            className="mt-5 w-full py-2 px-4 text-center bg-white text-black rounded font-bold text-lg hover:bg-gradient-to-l from-red-500 to-orange-500 hover:scale-105 transition-all"
+          >
+            Watch Trailer
+          </button>
+          <button
+            onClick={() => handlePlayVideo(data)}
+            className="mt-5 w-full py-2 px-4 text-center bg-white text-black rounded font-bold text-lg hover:bg-gradient-to-l from-red-500 to-orange-500 hover:scale-105 transition-all"
+          >
+            Play Now
+          </button>
+          <button
+            className="flex flex-col items-center justify-center gap-1 w-full cursor-pointer
+                    px-3 py-2 border border-black rounded-lg 
+                    text-white bg-black/30 hover:bg-transparent transition mt-5"
+          >
+            <span className="text-sm font-medium">+ Add to Watch List</span>
+          </button>
+          {/* <button
+            className="flex flex-col items-center justify-center gap-1 w-full cursor-pointer
+                    px-3 py-2 border border-green-400 rounded-lg 
+                    text-green-400 bg-black/30 hover:bg-green-200 transition mt-5"
+          >
+            <span className="text-sm font-medium">✔ In Watch List</span>
+          </button> */}
         </div>
 
         <div>
-          <h2 className='text-2xl lg:text-4xl font-bold text-white'>{data?.title || data?.name}</h2>
-          <p className='text-neutral-400'>{data?.tagline}</p>
-
+          <h2 className="text-2xl lg:text-4xl font-bold text-white">
+            {data?.title || data?.name}
+          </h2>
+          {/* <p className='text-neutral-400'>{data?.tagline}</p> */}
 
           <Divider />
-          <div className='flex items-center my-3 gap-3'>
-            <p>
-              Rating: {Number(data?.vote_average).toFixed(1)}+
-            </p>
-            <span>|</span>
-            <p>
-              View: {Number(data?.vote_count)}
-            </p>
-            {duration && duration.length > 1 && !isNaN(duration[0]) && !isNaN(duration[1]) ? (
+          <div className="flex items-center my-3 gap-3">
+            <p>Rating: </p>
+            <div className="w-8 h-8">
+              <CircularProgressbar
+                value={data?.vote_average * 10} // Vì vote_average tối đa là 10, nên nhân 10 để được %.
+                text={`${(data?.vote_average * 10).toFixed(0)}%`}
+                styles={buildStyles({
+                  textColor: "#fff",
+                  textSize: "25px",
+                  pathColor:
+                    data?.vote_average >= 7
+                      ? "green"
+                      : data?.vote_average >= 5
+                      ? "orange"
+                      : "red",
+                  trailColor: "#ddd",
+                })}
+              />
+            </div>
+            {/* <span>|</span>
+            <p>View: {Number(data?.vote_count)}</p> */}
+            {duration &&
+            duration.length > 1 &&
+            !isNaN(duration[0]) &&
+            !isNaN(duration[1]) ? (
               <>
                 <span>|</span>
-                <p>Duration: {duration[0]}h {duration[1]}m</p>
+                <p>
+                  Duration: {duration[0]}h {duration[1]}m
+                </p>
               </>
             ) : null}
-
-
           </div>
 
           <Divider />
 
           <div>
-            <h3 className='text-xl font-bold text-white mb-1'>Overview</h3>
+            <h3 className="text-xl font-bold text-white mb-1">Overview</h3>
             <p>{data?.overview}</p>
 
             <Divider />
-            <div className='flex items-center gap-3 my-3 text-center'>
+
+            <div className="flex gap-2">
+              {data?.genres?.map((genre, index) => (
+                <span
+                  key={'Genre' +index}
+                  className="bg-gray-700/60 text-white text-xs font-bold px-2 py-1 rounded-md"
+                >
+                  {genre?.name}
+                </span>
+              ))}
+            </div>
+
+            <Divider />
+            <div className="flex items-center gap-3 my-3 text-center">
               <p>Status: {data?.status}</p>
               <span>|</span>
-              <p>
-                Release Data: {moment(data?.release_date).format("MMMM Do YYYY")}
-              </p>
-              <span>|</span>
+              <p>Release Date: {moment(data?.release_date).format("YYYY")}</p>
+              {/* <span>|</span>
               <p>
                 Revenue: {Number(data?.revenue)}
-              </p>
+              </p> */}
             </div>
 
             <Divider />
 
             <div>
-              <p><span className='text-white'>Director: </span>{castData?.crew[0]?.name}</p>
+              <p>
+                <span className="text-white">Director: </span>
+                {castData?.crew[0]?.name}
+              </p>
 
-              <Divider />
+              {/* <Divider />
 
               <p>
                 <span className='text-white'>Writer: {writer}</span>
-              </p>
+              </p> */}
             </div>
 
             <Divider />
-            <h2 className='font-bold text-lg'>Cast: </h2>
-            <div className='grid grid-cols-[repeat(auto-fit,96px)] gap-5'>
-              {
-                castData?.cast?.filter(el => el?.profile_path).map((starCast, index) => {
+            <h2 className="font-bold text-lg">Cast: </h2>
+            <div className="grid grid-cols-[repeat(auto-fit,96px)] gap-5">
+              {castData?.cast
+                ?.filter((el) => el?.profile_path)
+                .map((starCast, index) => {
                   return (
-                    <div>
+                    <div key={"Star Cast" + index}>
                       <div>
                         <img
                           src={imageURL + starCast?.profile_path}
-                          className='w-24 h-24 rounded-full object-cover'
+                          className="w-24 h-24 rounded-full object-cover"
                         />
                       </div>
-                      <p className='font-bold text-center text-sm'>{starCast?.name}</p>
+                      <p className="font-bold text-center text-sm">
+                        {starCast?.name}
+                      </p>
                     </div>
-                  )
-                })
-              }
+                  );
+                })}
             </div>
           </div>
         </div>
       </div>
 
-      <div className='container mx-auto px-3'>
-        <h2 className='text-lg lg:text-2xl font-bold mb-3'>
+      <div className="container mx-auto px-3">
+        {/* <h2 className='text-lg lg:text-2xl font-bold mb-3'>
           Star Cast:
-        </h2>
-
+        </h2> */}
       </div>
 
       <div>
-        <HorizontalScrollCard data={similarData} heading={"Similar " + params?.explore} media_type={params?.explore} />
-        <HorizontalScrollCard data={recommendationData} heading={"recommendation " + params?.explore} media_type={params?.explore} />
+        <HorizontalScrollCard
+          data={similarData}
+          heading={"Similar " + params?.explore}
+          media_type={params?.explore}
+        />
+        <HorizontalScrollCard
+          data={recommendationData}
+          heading={"recommendation " + params?.explore}
+          media_type={params?.explore}
+        />
       </div>
 
-      {
-        playVideo && (
-          <VideoPlay data={playVideoId} close={() => setPlayVideo(false)} media_type={params?.explore}/>
-        )
-      }
+      {playVideo && (
+        <VideoPlay
+          data={playVideoId}
+          close={() => setPlayVideo(false)}
+          media_type={params?.explore}
+        />
+      )}
     </div>
-  )
-}
+  );
+};
 
-export default DetailsPage
+export default DetailsPage;

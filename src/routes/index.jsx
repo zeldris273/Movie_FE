@@ -5,6 +5,8 @@ import ExplorePage from "../pages/ExplorePage";
 import DetailsPage from "../pages/DetailsPage";
 import SearchPage from "../pages/SearchPage";
 import AuthPage from "../pages/AuthPage";
+import Watchlist from "../pages/Watchlist";
+import UploadVideo from "../pages/UploadVideo";
 
 const router = createBrowserRouter([
     {
@@ -31,6 +33,14 @@ const router = createBrowserRouter([
                 path: "auth",
                 element: <AuthPage/>
             },
+            {
+                path: "Watch-List",
+                element: <Watchlist/>
+            },
+            {
+                path: "upload-video",
+                element: <UploadVideo/>
+            }
         ]
     }
 ])
