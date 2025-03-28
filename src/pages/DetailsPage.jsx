@@ -157,7 +157,8 @@ const DetailsPage = () => {
                 Revenue: {Number(data?.revenue)}
               </p> */}
             </div>
-
+            <Divider />
+            <p>Episode Number: {data?.number_of_episodes}</p>
             <Divider />
 
             <div>
