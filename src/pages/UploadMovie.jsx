@@ -3,15 +3,14 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import Swal from "sweetalert2";
 
-export default function UploadVideo() {
+export default function UploadMovie() {
   const [formData, setFormData] = useState({
     title: "",
-    rating: 0,
     overview: "",
     genres: [],
     status: "",
     releaseDate: "",
-    type: "movie",
+    type: "single_movie", // Chỉ giữ single_movie
     studio: "",
     director: "",
     videoFile: null,
@@ -72,7 +71,7 @@ export default function UploadVideo() {
   };
 
   const handleGenresChange = (e) => {
-    const genres = e.target.value.split(",").map((g) => g.trim());
+    const genres = e.target.value.split(",").map((g) => g.trim()).filter((g) => g);
     setFormData((prev) => ({ ...prev, genres }));
   };
 
@@ -83,10 +82,10 @@ export default function UploadVideo() {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
-    if (files.length > 2) {
+    if (files.length !== 2) {
       Swal.fire({
         title: "Thông báo!",
-        text: "Chỉ được chọn tối đa 2 ảnh!",
+        text: "Phải chọn đúng 2 ảnh cho phim lẻ!",
         icon: "info",
         background: "#1f2937",
         color: "#fff",
@@ -99,10 +98,25 @@ export default function UploadVideo() {
 
   const handleUpload = async () => {
     const { title, status, type, videoFile, imageFiles } = formData;
-    if (!title || !status || !type || !videoFile || imageFiles.length !== 2) {
+
+    // Kiểm tra dữ liệu đầu vào
+    if (!title || !status || !type || !videoFile) {
       Swal.fire({
         title: "Lỗi!",
-        text: "Vui lòng điền đầy đủ thông tin: Title, Status, Type, 1 video và 2 ảnh!",
+        text: "Vui lòng điền đầy đủ thông tin: Title, Status, Type, và 1 video!",
+        icon: "error",
+        background: "#1f2937",
+        color: "#fff",
+        confirmButtonColor: "#facc15",
+      });
+      return;
+    }
+
+    // Kiểm tra số lượng ảnh (phải đúng 2 ảnh cho phim lẻ)
+    if (imageFiles.length !== 2) {
+      Swal.fire({
+        title: "Lỗi!",
+        text: "Phải chọn đúng 2 ảnh cho phim lẻ!",
         icon: "error",
         background: "#1f2937",
         color: "#fff",
@@ -126,14 +140,13 @@ export default function UploadVideo() {
 
     const uploadData = new FormData();
     uploadData.append("Title", formData.title);
-    uploadData.append("Rating", formData.rating.toString());
-    uploadData.append("Overview", formData.overview);
+    uploadData.append("Overview", formData.overview || "");
     formData.genres.forEach((genre) => uploadData.append("Genres", genre));
     uploadData.append("Status", formData.status);
     if (formData.releaseDate) uploadData.append("ReleaseDate", formData.releaseDate);
     uploadData.append("Type", formData.type);
-    uploadData.append("Studio", formData.studio);
-    uploadData.append("Director", formData.director);
+    uploadData.append("Studio", formData.studio || "");
+    uploadData.append("Director", formData.director || "");
     uploadData.append("VideoFile", formData.videoFile);
     formData.imageFiles.forEach((img) => uploadData.append("ImageFiles", img));
 
@@ -156,7 +169,7 @@ export default function UploadVideo() {
       );
 
       setVideoUrl(response.data.videoUrl);
-      setImageUrls(response.data.imageUrls);
+      setImageUrls(response.data.imageUrls || []);
       Swal.fire({
         title: "Thành công!",
         text: "Upload thành công!",
@@ -165,11 +178,27 @@ export default function UploadVideo() {
         color: "#fff",
         confirmButtonColor: "#facc15",
       });
+
+      // Reset form sau khi upload thành công
+      setFormData({
+        title: "",
+        overview: "",
+        genres: [],
+        status: "",
+        releaseDate: "",
+        type: "single_movie",
+        studio: "",
+        director: "",
+        videoFile: null,
+        imageFiles: [],
+      });
+      setUploadProgress(0);
     } catch (error) {
       console.error("Lỗi upload:", error);
+      const errorMessage = error.response?.data?.error || "Upload thất bại!";
       Swal.fire({
         title: "Lỗi!",
-        text: "Upload thất bại!",
+        text: errorMessage,
         icon: "error",
         background: "#1f2937",
         color: "#fff",
@@ -240,7 +269,9 @@ export default function UploadVideo() {
       {/* Main Content */}
       <main className="max-w-2xl mx-auto py-8 px-4">
         <div className="bg-gray-800 rounded-lg shadow-lg p-6 space-y-6">
-          <h2 className="text-xl font-semibold text-center text-white">Upload Movie</h2>
+          <h2 className="text-xl font-semibold text-center text-white">
+            Upload Movie
+          </h2>
 
           {/* Form Inputs */}
           <div className="space-y-4">
@@ -253,23 +284,6 @@ export default function UploadVideo() {
                 name="title"
                 type="text"
                 value={formData.title}
-                onChange={handleInputChange}
-                className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="rating" className="block text-sm font-medium text-gray-400 mb-1">
-                Rating (0-10)
-              </label>
-              <input
-                id="rating"
-                name="rating"
-                type="number"
-                min="0"
-                max="10"
-                step="0.1"
-                value={formData.rating}
                 onChange={handleInputChange}
                 className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
               />
@@ -319,7 +333,6 @@ export default function UploadVideo() {
                 <option value="Upcoming">Upcoming</option>
                 <option value="Released">Released</option>
                 <option value="Canceled">Canceled</option>
-                <option value="Ongoing">Ongoing</option>
               </select>
             </div>
 
@@ -335,22 +348,6 @@ export default function UploadVideo() {
                 onChange={handleInputChange}
                 className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
               />
-            </div>
-
-            <div>
-              <label htmlFor="type" className="block text-sm font-medium text-gray-400 mb-1">
-                Type *
-              </label>
-              <select
-                id="type"
-                name="type"
-                value={formData.type}
-                onChange={handleInputChange}
-                className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-              >
-                <option value="movie">Movie</option>
-                <option value="tv_series">TV Series</option>
-              </select>
             </div>
 
             <div>
@@ -388,7 +385,7 @@ export default function UploadVideo() {
               <input
                 id="videoFile"
                 type="file"
-                accept="video/mp4,video/avi,video/mov"
+                accept="video/mp4,video/avi,video/mov,video/mp2t"
                 onChange={handleVideoChange}
                 className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition duration-200"
               />
