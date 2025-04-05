@@ -7,6 +7,7 @@ import SearchPage from "../pages/SearchPage";
 import AuthPage from "../pages/AuthPage";
 import Watchlist from "../pages/Watchlist";
 import UploadMovie from "../pages/UploadMovie";
+import UploadTvSeries from "../pages/UploadTvSeries";
 
 const router = createBrowserRouter([
     {
@@ -38,8 +39,12 @@ const router = createBrowserRouter([
                 element: <Watchlist/>
             },
             {
-                path: "upload-video",
+                path: "upload-movie",
                 element: <UploadMovie/>
+            },
+            {
+                path: "upload-tv-series",
+                element: <UploadTvSeries/>
             }
         ]
     }

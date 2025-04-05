@@ -60,8 +60,12 @@ const Header = () => {
     navigate("/Watch-List");
   };
 
-  const handleUploadVideo = () => {
-    navigate("/upload-video");
+  const handleUploadMovie = () => {
+    navigate("/upload-movie");
+  };
+
+  const handleUploadTvSeries = () => {
+    navigate("/upload-tv-series");
   };
 
   return (
@@ -114,12 +118,20 @@ const Header = () => {
               </div>
               <div className="absolute top-full right-0 mt-2 w-40 bg-neutral-700 text-white rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out delay-1000 z-50 group-hover:pointer-events-auto">
                 {isAdmin ? (
-                  <button
-                    onClick={handleUploadVideo}
+                  <div>
+                    <button
+                    onClick={handleUploadMovie}
                     className="block w-full text-left px-4 py-2 hover:bg-neutral-600"
                   >
-                    Upload Video
+                    Upload Movie
                   </button>
+                  <button
+                    onClick={handleUploadTvSeries}
+                    className="block w-full text-left px-4 py-2 hover:bg-neutral-600"
+                  >
+                    Upload Tv Series
+                  </button>
+                  </div>
                 ) : (
                   <button
                     onClick={handleWatchList}

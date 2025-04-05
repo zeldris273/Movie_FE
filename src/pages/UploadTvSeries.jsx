@@ -3,21 +3,20 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import Swal from "sweetalert2";
 
-export default function UploadMovie() {
+export default function UploadTvSeries() {
   const [formData, setFormData] = useState({
     title: "",
     overview: "",
     genres: [],
     status: "",
     releaseDate: "",
-    type: "single_movie",
     studio: "",
     director: "",
-    videoFile: null,
-    imageFiles: [],
+    posterImageFile: null,
+    backdropImageFile: null,
   });
-  const [videoUrl, setVideoUrl] = useState("");
-  const [imageUrls, setImageUrls] = useState([]);
+  const [posterImageUrl, setPosterImageUrl] = useState("");
+  const [backdropImageUrl, setBackdropImageUrl] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -75,45 +74,22 @@ export default function UploadMovie() {
     setFormData((prev) => ({ ...prev, genres }));
   };
 
-  const handleVideoChange = (e) => {
+  const handlePosterImageChange = (e) => {
     const file = e.target.files[0];
-    if (file) setFormData((prev) => ({ ...prev, videoFile: file }));
+    if (file) setFormData((prev) => ({ ...prev, posterImageFile: file }));
   };
 
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length !== 2) {
-      Swal.fire({
-        title: "Thông báo!",
-        text: "Phải chọn đúng 2 ảnh cho phim lẻ!",
-        icon: "info",
-        background: "#1f2937",
-        color: "#fff",
-        confirmButtonColor: "#facc15",
-      });
-      return;
-    }
-    setFormData((prev) => ({ ...prev, imageFiles: files }));
+  const handleBackdropImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) setFormData((prev) => ({ ...prev, backdropImageFile: file }));
   };
 
   const handleUpload = async () => {
-    const { title, status, type, videoFile, imageFiles } = formData;
-    if (!title || !status || !type || !videoFile) {
+    const { title, status, posterImageFile, backdropImageFile } = formData;
+    if (!title || !status || !posterImageFile || !backdropImageFile) {
       Swal.fire({
         title: "Lỗi!",
-        text: "Vui lòng điền đầy đủ thông tin: Title, Status, Type, và 1 video!",
-        icon: "error",
-        background: "#1f2937",
-        color: "#fff",
-        confirmButtonColor: "#facc15",
-      });
-      return;
-    }
-
-    if (imageFiles.length !== 2) {
-      Swal.fire({
-        title: "Lỗi!",
-        text: "Phải chọn đúng 2 ảnh cho phim lẻ!",
+        text: "Vui lòng điền đầy đủ thông tin: Title, Status, Poster Image, và Backdrop Image!",
         icon: "error",
         background: "#1f2937",
         color: "#fff",
@@ -141,15 +117,14 @@ export default function UploadMovie() {
     formData.genres.forEach((genre) => uploadData.append("Genres", genre));
     uploadData.append("Status", formData.status);
     if (formData.releaseDate) uploadData.append("ReleaseDate", formData.releaseDate);
-    uploadData.append("Type", formData.type);
     uploadData.append("Studio", formData.studio || "");
     uploadData.append("Director", formData.director || "");
-    uploadData.append("VideoFile", formData.videoFile);
-    formData.imageFiles.forEach((img) => uploadData.append("ImageFiles", img));
+    uploadData.append("PosterImageFile", formData.posterImageFile);
+    uploadData.append("BackdropImageFile", formData.backdropImageFile);
 
     try {
       const response = await axios.post(
-        "http://localhost:5116/api/movies/upload",
+        "http://localhost:5116/api/tvseries/upload",
         uploadData,
         {
           headers: {
@@ -165,11 +140,11 @@ export default function UploadMovie() {
         }
       );
 
-      setVideoUrl(response.data.videoUrl);
-      setImageUrls(response.data.imageUrls || []);
+      setPosterImageUrl(response.data.imageUrl);
+      setBackdropImageUrl(response.data.backdropUrl);
       Swal.fire({
         title: "Thành công!",
-        text: "Upload thành công!",
+        text: "Upload TV series thành công!",
         icon: "success",
         background: "#1f2937",
         color: "#fff",
@@ -182,11 +157,10 @@ export default function UploadMovie() {
         genres: [],
         status: "",
         releaseDate: "",
-        type: "single_movie",
         studio: "",
         director: "",
-        videoFile: null,
-        imageFiles: [],
+        posterImageFile: null,
+        backdropImageFile: null,
       });
       setUploadProgress(0);
     } catch (error) {
@@ -207,7 +181,7 @@ export default function UploadMovie() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="bg-red-600 text-white p-6 rounded-lg shadow-lg">
-          <p className="text-lg font-semibold">Bạn không có quyền upload video!</p>
+          <p className="text-lg font-semibold">Bạn không có quyền upload TV series!</p>
         </div>
       </div>
     );
@@ -223,7 +197,7 @@ export default function UploadMovie() {
               <svg className="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-2h2v2h-2zm1-4c-1.1 0-2-.9-2-2V7h4v4c0 1.1-.9 2-2 2z" />
               </svg>
-              MOVIE
+              TV SERIES
             </h1>
             <nav className="flex space-x-4">
               <a href="#" className="text-gray-400 hover:text-white transition duration-200">
@@ -266,7 +240,7 @@ export default function UploadMovie() {
       <main className="max-w-2xl mx-auto py-8 px-4">
         <div className="bg-gray-800 rounded-lg shadow-lg p-6 space-y-6">
           <h2 className="text-xl font-semibold text-center text-white">
-            Upload Movie
+            Upload TV Series
           </h2>
 
           {/* Form Inputs */}
@@ -326,8 +300,8 @@ export default function UploadMovie() {
                 className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
               >
                 <option value="">Select Status</option>
-                <option value="Upcoming">Upcoming</option>
-                <option value="Released">Released</option>
+                <option value="Ongoing">Ongoing</option>
+                <option value="Completed">Completed</option>
                 <option value="Canceled">Canceled</option>
               </select>
             </div>
@@ -375,31 +349,29 @@ export default function UploadMovie() {
             </div>
 
             <div>
-              <label htmlFor="videoFile" className="block text-sm font-medium text-gray-400 mb-1">
-                Choose Video *
+              <label htmlFor="posterImageFile" className="block text-sm font-medium text-gray-400 mb-1">
+                Choose Poster Image *
               </label>
               <input
-                id="videoFile"
+                id="posterImageFile"
                 type="file"
-                accept="video/mp4,video/avi,video/mov,video/mp2t"
-                onChange={handleVideoChange}
+                accept="image/jpeg,image/png"
+                onChange={handlePosterImageChange}
                 className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition duration-200"
               />
             </div>
 
             <div>
-              <label htmlFor="imageFiles" className="block text-sm font-medium text-gray-400 mb-1">
-                Choose Images (2 images) *
+              <label htmlFor="backdropImageFile" className="block text-sm font-medium text-gray-400 mb-1">
+                Choose Backdrop Image *
               </label>
               <input
-                id="imageFiles"
+                id="backdropImageFile"
                 type="file"
                 accept="image/jpeg,image/png"
-                multiple
-                onChange={handleImageChange}
+                onChange={handleBackdropImageChange}
                 className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition duration-200"
               />
-              <p className="text-xs text-gray-400 mt-1">Select exactly 2 images</p>
             </div>
           </div>
 
@@ -408,7 +380,7 @@ export default function UploadMovie() {
             onClick={handleUpload}
             className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-300 shadow-md"
           >
-            Upload Movie
+            Upload TV Series
           </button>
 
           {/* Progress Bar */}
@@ -423,35 +395,32 @@ export default function UploadMovie() {
           )}
 
           {/* Display Results */}
-          {(videoUrl || imageUrls.length > 0) && (
+          {(posterImageUrl || backdropImageUrl) && (
             <div className="space-y-4">
-              {videoUrl && (
+              {posterImageUrl && (
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-200">Uploaded Video:</h3>
+                  <h3 className="text-lg font-semibold text-gray-200">Uploaded Poster Image:</h3>
                   <a
-                    href={videoUrl}
+                    href={posterImageUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-400 hover:underline break-all"
                   >
-                    {videoUrl}
+                    {posterImageUrl}
                   </a>
                 </div>
               )}
-              {imageUrls.length > 0 && (
+              {backdropImageUrl && (
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-200">Uploaded Images:</h3>
-                  {imageUrls.map((img, index) => (
-                    <a
-                      key={index}
-                      href={img}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block text-blue-400 hover:underline break-all"
-                    >
-                      Image {index + 1}: {img}
-                    </a>
-                  ))}
+                  <h3 className="text-lg font-semibold text-gray-200">Uploaded Backdrop Image:</h3>
+                  <a
+                    href={backdropImageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:underline break-all"
+                  >
+                    {backdropImageUrl}
+                  </a>
                 </div>
               )}
             </div>
