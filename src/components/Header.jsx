@@ -65,8 +65,12 @@ const Header = () => {
   };
 
   const handleUploadTvSeries = () => {
-    navigate("/upload-tv-series");
+    navigate("/create-tv-series");
   };
+
+  const handleAddEpisode = () => {
+    navigate("/add-episode");
+  }
 
   return (
     <header className="fixed top-0 w-full h-16 bg-neutral-600 bg-opacity-75 z-40">
@@ -129,7 +133,13 @@ const Header = () => {
                     onClick={handleUploadTvSeries}
                     className="block w-full text-left px-4 py-2 hover:bg-neutral-600"
                   >
-                    Upload Tv Series
+                    Create Tv Series
+                  </button>
+                  <button
+                    onClick={handleAddEpisode}
+                    className="block w-full text-left px-4 py-2 hover:bg-neutral-600"
+                  >
+                    Add Episode
                   </button>
                   </div>
                 ) : (

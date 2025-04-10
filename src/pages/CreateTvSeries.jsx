@@ -3,25 +3,26 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import Swal from "sweetalert2";
 
-export default function UploadEpisode() {
+export default function CreateTvSeries() {
   const [formData, setFormData] = useState({
-    tvSeriesId: "",
-    seasonId: "",
-    episodeNumber: "",
-    videoFile: null,
+    title: "",
+    overview: "",
+    genres: [],
+    status: "",
+    releaseDate: "",
+    studio: "",
+    director: "",
+    posterImageFile: null,
+    backdropImageFile: null,
   });
-  const [tvSeriesList, setTvSeriesList] = useState([]);
-  const [seasonsList, setSeasonsList] = useState([]);
-  const [videoUrl, setVideoUrl] = useState("");
+  const [posterImageUrl, setPosterImageUrl] = useState("");
+  const [backdropImageUrl, setBackdropImageUrl] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
     checkAdminRole();
-    if (isAdmin) {
-      fetchTvSeries();
-    }
-  }, [isAdmin]);
+  }, []);
 
   const checkAdminRole = () => {
     const token = localStorage.getItem("token");
@@ -63,72 +64,32 @@ export default function UploadEpisode() {
     }
   };
 
-  const fetchTvSeries = async () => {
-    try {
-      const response = await axios.get("http://localhost:5116/api/tvseries");
-      setTvSeriesList(response.data);
-    } catch (error) {
-      console.error("Lỗi khi lấy danh sách TV series:", error);
-      Swal.fire({
-        title: "Lỗi!",
-        text: "Không thể lấy danh sách TV series!",
-        icon: "error",
-        background: "#1f2937",
-        color: "#fff",
-        confirmButtonColor: "#facc15",
-      });
-    }
-  };
-
-  const fetchSeasons = async (tvSeriesId) => {
-    try {
-      const response = await axios.get(`http://localhost:5116/api/tvseries/${tvSeriesId}/seasons`);
-      setSeasonsList(response.data);
-    } catch (error) {
-      console.error("Lỗi khi lấy danh sách seasons:", error);
-      Swal.fire({
-        title: "Lỗi!",
-        text: "Không thể lấy danh sách seasons!",
-        icon: "error",
-        background: "#1f2937",
-        color: "#fff",
-        confirmButtonColor: "#facc15",
-      });
-    }
-  };
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-
-    if (name === "tvSeriesId" && value) {
-      fetchSeasons(value);
-    }
   };
 
-  const handleVideoChange = (e) => {
+  const handleGenresChange = (e) => {
+    const genres = e.target.value.split(",").map((g) => g.trim()).filter((g) => g);
+    setFormData((prev) => ({ ...prev, genres }));
+  };
+
+  const handlePosterImageChange = (e) => {
     const file = e.target.files[0];
-    if (file) setFormData((prev) => ({ ...prev, videoFile: file }));
+    if (file) setFormData((prev) => ({ ...prev, posterImageFile: file }));
+  };
+
+  const handleBackdropImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) setFormData((prev) => ({ ...prev, backdropImageFile: file }));
   };
 
   const handleUpload = async () => {
-    if (!isAdmin) {
-      Swal.fire({
-        title: "Cảnh báo!",
-        text: "Bạn không có quyền upload!",
-        icon: "warning",
-        background: "#1f2937",
-        color: "#fff",
-        confirmButtonColor: "#facc15",
-      });
-      return;
-    }
-
-    const { tvSeriesId, seasonId, episodeNumber, videoFile } = formData;
-    if (!tvSeriesId || !seasonId || !episodeNumber || !videoFile) {
+    const { title, status, posterImageFile, backdropImageFile } = formData;
+    if (!title || !status || !posterImageFile || !backdropImageFile) {
       Swal.fire({
         title: "Lỗi!",
-        text: "Vui lòng điền đầy đủ thông tin: TV Series, Season, Episode Number, và Video File!",
+        text: "Vui lòng điền đầy đủ thông tin: Title, Status, Poster Image, và Backdrop Image!",
         icon: "error",
         background: "#1f2937",
         color: "#fff",
@@ -151,13 +112,19 @@ export default function UploadEpisode() {
     }
 
     const uploadData = new FormData();
-    uploadData.append("SeasonId", formData.seasonId);
-    uploadData.append("EpisodeNumber", formData.episodeNumber);
-    uploadData.append("VideoFile", formData.videoFile);
+    uploadData.append("Title", formData.title);
+    uploadData.append("Overview", formData.overview || "");
+    formData.genres.forEach((genre) => uploadData.append("Genres", genre));
+    uploadData.append("Status", formData.status);
+    if (formData.releaseDate) uploadData.append("ReleaseDate", formData.releaseDate);
+    uploadData.append("Studio", formData.studio || "");
+    uploadData.append("Director", formData.director || "");
+    uploadData.append("PosterImageFile", formData.posterImageFile);
+    uploadData.append("BackdropImageFile", formData.backdropImageFile);
 
     try {
       const response = await axios.post(
-        "http://localhost:5116/api/tvseries/episodes/upload",
+        "http://localhost:5116/api/tvseries/create",
         uploadData,
         {
           headers: {
@@ -173,10 +140,11 @@ export default function UploadEpisode() {
         }
       );
 
-      setVideoUrl(response.data.videoUrl);
+      setPosterImageUrl(response.data.imageUrl);
+      setBackdropImageUrl(response.data.backdropUrl);
       Swal.fire({
         title: "Thành công!",
-        text: "Upload episode thành công!",
+        text: "Upload TV series thành công!",
         icon: "success",
         background: "#1f2937",
         color: "#fff",
@@ -184,12 +152,16 @@ export default function UploadEpisode() {
       });
 
       setFormData({
-        tvSeriesId: "",
-        seasonId: "",
-        episodeNumber: "",
-        videoFile: null,
+        title: "",
+        overview: "",
+        genres: [],
+        status: "",
+        releaseDate: "",
+        studio: "",
+        director: "",
+        posterImageFile: null,
+        backdropImageFile: null,
       });
-      setSeasonsList([]);
       setUploadProgress(0);
     } catch (error) {
       console.error("Lỗi upload:", error);
@@ -209,7 +181,7 @@ export default function UploadEpisode() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="bg-red-600 text-white p-6 rounded-lg shadow-lg">
-          <p className="text-lg font-semibold">Bạn không có quyền upload episode!</p>
+          <p className="text-lg font-semibold">Bạn không có quyền upload TV series!</p>
         </div>
       </div>
     );
@@ -225,7 +197,7 @@ export default function UploadEpisode() {
               <svg className="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-2h2v2h-2zm1-4c-1.1 0-2-.9-2-2V7h4v4c0 1.1-.9 2-2 2z" />
               </svg>
-              UPLOAD EPISODE
+              TV SERIES
             </h1>
             <nav className="flex space-x-4">
               <a href="#" className="text-gray-400 hover:text-white transition duration-200">
@@ -268,76 +240,136 @@ export default function UploadEpisode() {
       <main className="max-w-2xl mx-auto py-8 px-4">
         <div className="bg-gray-800 rounded-lg shadow-lg p-6 space-y-6">
           <h2 className="text-xl font-semibold text-center text-white">
-            Upload Episode
+            Upload TV Series
           </h2>
 
           {/* Form Inputs */}
           <div className="space-y-4">
             <div>
-              <label htmlFor="tvSeriesId" className="block text-sm font-medium text-gray-400 mb-1">
-                TV Series *
-              </label>
-              <select
-                id="tvSeriesId"
-                name="tvSeriesId"
-                value={formData.tvSeriesId}
-                onChange={handleInputChange}
-                className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-              >
-                <option value="">Select TV Series</option>
-                {tvSeriesList.map((series) => (
-                  <option key={series.id} value={series.id}>
-                    {series.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="seasonId" className="block text-sm font-medium text-gray-400 mb-1">
-                Season *
-              </label>
-              <select
-                id="seasonId"
-                name="seasonId"
-                value={formData.seasonId}
-                onChange={handleInputChange}
-                className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                disabled={!formData.tvSeriesId}
-              >
-                <option value="">Select Season</option>
-                {seasonsList.map((season) => (
-                  <option key={season.id} value={season.id}>
-                    Season {season.seasonNumber}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="episodeNumber" className="block text-sm font-medium text-gray-400 mb-1">
-                Episode Number *
+              <label htmlFor="title" className="block text-sm font-medium text-gray-400 mb-1">
+                Title *
               </label>
               <input
-                id="episodeNumber"
-                name="episodeNumber"
-                type="number"
-                value={formData.episodeNumber}
+                id="title"
+                name="title"
+                type="text"
+                value={formData.title}
                 onChange={handleInputChange}
                 className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                min="1"
               />
             </div>
 
             <div>
-              <label htmlFor="videoFile" className="block text-sm font-medium text-gray-400 mb-1">
-                Choose Video *
+              <label htmlFor="overview" className="block text-sm font-medium text-gray-400 mb-1">
+                Overview
+              </label>
+              <textarea
+                id="overview"
+                name="overview"
+                value={formData.overview}
+                onChange={handleInputChange}
+                className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+                rows="3"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="genres" className="block text-sm font-medium text-gray-400 mb-1">
+                Genres (comma-separated)
               </label>
               <input
-                id="videoFile"
+                id="genres"
+                name="genres"
+                type="text"
+                value={formData.genres.join(", ")}
+                onChange={handleGenresChange}
+                className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+                placeholder="e.g., Action, Drama"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="status" className="block text-sm font-medium text-gray-400 mb-1">
+                Status *
+              </label>
+              <select
+                id="status"
+                name="status"
+                value={formData.status}
+                onChange={handleInputChange}
+                className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+              >
+                <option value="">Select Status</option>
+                <option value="Ongoing">Ongoing</option>
+                <option value="Completed">Completed</option>
+                <option value="Canceled">Canceled</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="releaseDate" className="block text-sm font-medium text-gray-400 mb-1">
+                Release Date (mm/dd/yyyy)
+              </label>
+              <input
+                id="releaseDate"
+                name="releaseDate"
+                type="date"
+                value={formData.releaseDate}
+                onChange={handleInputChange}
+                className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="studio" className="block text-sm font-medium text-gray-400 mb-1">
+                Studio
+              </label>
+              <input
+                id="studio"
+                name="studio"
+                type="text"
+                value={formData.studio}
+                onChange={handleInputChange}
+                className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="director" className="block text-sm font-medium text-gray-400 mb-1">
+                Director
+              </label>
+              <input
+                id="director"
+                name="director"
+                type="text"
+                value={formData.director}
+                onChange={handleInputChange}
+                className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="posterImageFile" className="block text-sm font-medium text-gray-400 mb-1">
+                Choose Poster Image *
+              </label>
+              <input
+                id="posterImageFile"
                 type="file"
-                accept="video/mp4,video/avi,video/mov,video/mp2t"
-                onChange={handleVideoChange}
+                accept="image/jpeg,image/png"
+                onChange={handlePosterImageChange}
+                className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition duration-200"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="backdropImageFile" className="block text-sm font-medium text-gray-400 mb-1">
+                Choose Backdrop Image *
+              </label>
+              <input
+                id="backdropImageFile"
+                type="file"
+                accept="image/jpeg,image/png"
+                onChange={handleBackdropImageChange}
                 className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition duration-200"
               />
             </div>
@@ -348,7 +380,7 @@ export default function UploadEpisode() {
             onClick={handleUpload}
             className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-300 shadow-md"
           >
-            Upload Episode
+            Upload TV Series
           </button>
 
           {/* Progress Bar */}
@@ -363,19 +395,34 @@ export default function UploadEpisode() {
           )}
 
           {/* Display Results */}
-          {videoUrl && (
+          {(posterImageUrl || backdropImageUrl) && (
             <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-200">Uploaded Video:</h3>
-                <a
-                  href={videoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-400 hover:underline break-all"
-                >
-                  {videoUrl}
-                </a>
-              </div>
+              {posterImageUrl && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-200">Uploaded Poster Image:</h3>
+                  <a
+                    href={posterImageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:underline break-all"
+                  >
+                    {posterImageUrl}
+                  </a>
+                </div>
+              )}
+              {backdropImageUrl && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-200">Uploaded Backdrop Image:</h3>
+                  <a
+                    href={backdropImageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:underline break-all"
+                  >
+                    {backdropImageUrl}
+                  </a>
+                </div>
+              )}
             </div>
           )}
         </div>

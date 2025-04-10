@@ -1,76 +1,63 @@
 import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import useFetchDetails from "../hooks/useFetchDetails";
-import useFetch from "../hooks/useFetch";
-import { useSelector } from "react-redux";
 import moment from "moment";
 import Divider from "../components/Divider";
-import HorizontalScrollCard from "../components/HorizontalScrollCard";
-import VideoPlay from "../components/VideoPlay";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
 
 const DetailsPage = () => {
   const params = useParams();
-  const imageURL = useSelector((state) => state.movieData.imageURL);
-  const { data } = useFetchDetails(`/${params?.explore}/${params?.id}`);
-  const { data: castData } = useFetchDetails(
-    `/${params?.explore}/${params?.id}/credits`
-  );
-  const { data: similarData } = useFetch(
-    `/${params?.explore}/${params?.id}/similar`
-  );
-  const { data: recommendationData } = useFetch(
-    `/${params?.explore}/${params?.id}/recommendations`
-  );
-  const [playVideo, setPlayVideo] = useState(false);
-  const [playVideoId, setPlayVideoId] = useState("");
+  const mediaType = params?.explore; // "movie" hoặc "tvseries"
+  const id = params?.id;
 
-  console.log("data: ", data);
-  console.log("start cast: ", castData)
+  const { data, loading, error } = useFetchDetails(mediaType, id);
 
-  const duration = (data?.runtime / 60)?.toFixed(1).split(".");
-  const writer = castData?.crew
-    ?.filter((el) => el?.job === "Writer")
-    .map((el) => el?.name)
-    .join(", ");
-  console.log(writer);
+  if (loading) {
+    return <div className="text-white text-center">Loading...</div>;
+  }
 
-  const handlePlayVideo = (data) => {
-    setPlayVideoId(data);
-    setPlayVideo(true);
-  };
+  if (error) {
+    return <div className="text-white text-center">Error: {error}</div>;
+  }
+
+  if (!data) {
+    return <div className="text-white text-center">No data found.</div>;
+  }
 
   return (
     <div>
+      {/* Thêm lại backdrop_img */}
       <div className="w-full h-[280px] relative hidden lg:block">
         <div className="w-full h-full">
-          <img
-            src={imageURL + data?.backdrop_path}
-            className="h-full w-full object-cover"
-          />
+          {data?.backdropUrl ? (
+            <img
+              src={data.backdropUrl}
+              className="h-full w-full object-cover"
+              alt="Backdrop"
+            />
+          ) : (
+            <div className="bg-neutral-800 h-full w-full flex justify-center items-center">
+              No Backdrop Image
+            </div>
+          )}
         </div>
         <div className="absolute w-full h-full top-0 bg-gradient-to-t from-neutral-900/90 to-transparent"></div>
       </div>
 
       <div className="container mx-auto px-3 py-20 lg:py-0 flex flex-col lg:flex-row gap-5 lg:gap-10">
-        <div className="relative mx-auto w-fit lg:-mt-28 lg:mx-0 min-w-60">
-          <img
-            src={imageURL + data?.poster_path}
-            className="h-80 w-60 object-cover rounded"
-          />
-          <button
-            onClick={() => handlePlayVideo(data)}
-            className="mt-5 w-full py-2 px-4 text-center bg-white text-black rounded font-bold text-lg hover:bg-gradient-to-l from-red-500 to-orange-500 hover:scale-105 transition-all"
-          >
-            Watch Trailer
-          </button>
-          <button
-            onClick={() => handlePlayVideo(data)}
-            className="mt-5 w-full py-2 px-4 text-center bg-white text-black rounded font-bold text-lg hover:bg-gradient-to-l from-red-500 to-orange-500 hover:scale-105 transition-all"
-          >
-            Play Now
-          </button>
+        <div className="relative mx-auto w-fit lg:mx-0 min-w-60 lg:-mt-28">
+          {data?.imageUrl ? (
+            <img
+              src={data.imageUrl}
+              className="h-80 w-60 object-cover rounded"
+              alt={data.title}
+            />
+          ) : (
+            <div className="bg-neutral-800 h-80 w-60 flex justify-center items-center rounded">
+              No Image Found
+            </div>
+          )}
           <button
             className="flex flex-col items-center justify-center gap-1 w-full cursor-pointer
                     px-3 py-2 border border-black rounded-lg 
@@ -78,71 +65,54 @@ const DetailsPage = () => {
           >
             <span className="text-sm font-medium">+ Add to Watch List</span>
           </button>
-          {/* <button
-            className="flex flex-col items-center justify-center gap-1 w-full cursor-pointer
-                    px-3 py-2 border border-green-400 rounded-lg 
-                    text-green-400 bg-black/30 hover:bg-green-200 transition mt-5"
-          >
-            <span className="text-sm font-medium">✔ In Watch List</span>
-          </button> */}
         </div>
 
         <div>
           <h2 className="text-2xl lg:text-4xl font-bold text-white">
-            {data?.title || data?.name}
+            {data?.title}
           </h2>
-          {/* <p className='text-neutral-400'>{data?.tagline}</p> */}
 
           <Divider />
           <div className="flex items-center my-3 gap-3">
-            <p>Rating: </p>
-            <div className="w-8 h-8">
-              <CircularProgressbar
-                value={data?.vote_average * 10} // Vì vote_average tối đa là 10, nên nhân 10 để được %.
-                text={`${(data?.vote_average * 10).toFixed(0)}%`}
-                styles={buildStyles({
-                  textColor: "#fff",
-                  textSize: "25px",
-                  pathColor:
-                    data?.vote_average >= 7
-                      ? "green"
-                      : data?.vote_average >= 5
-                      ? "orange"
-                      : "red",
-                  trailColor: "#ddd",
-                })}
-              />
-            </div>
-            {/* <span>|</span>
-            <p>View: {Number(data?.vote_count)}</p> */}
-            {duration &&
-            duration.length > 1 &&
-            !isNaN(duration[0]) &&
-            !isNaN(duration[1]) ? (
+            {data?.rating != null && (
               <>
-                <span>|</span>
-                <p>
-                  Duration: {duration[0]}h {duration[1]}m
-                </p>
+                <p>Rating: </p>
+                <div className="w-8 h-8">
+                  <CircularProgressbar
+                    value={data.rating * 10}
+                    text={`${(data.rating * 10).toFixed(0)}%`}
+                    styles={buildStyles({
+                      textColor: "#fff",
+                      textSize: "25px",
+                      pathColor:
+                        data.rating >= 7
+                          ? "green"
+                          : data.rating >= 5
+                          ? "orange"
+                          : "red",
+                      trailColor: "#ddd",
+                    })}
+                  />
+                </div>
               </>
-            ) : null}
+            )}
           </div>
 
           <Divider />
 
           <div>
             <h3 className="text-xl font-bold text-white mb-1">Overview</h3>
-            <p>{data?.overview}</p>
+            <p>{data?.overview || "No overview available."}</p>
 
             <Divider />
 
             <div className="flex gap-2">
-              {data?.genres?.map((genre, index) => (
+              {data?.genres?.split(", ").map((genre, index) => (
                 <span
-                  key={'Genre' +index}
+                  key={"Genre" + index}
                   className="bg-gray-700/60 text-white text-xs font-bold px-2 py-1 rounded-md"
                 >
-                  {genre?.name}
+                  {genre}
                 </span>
               ))}
             </div>
@@ -151,80 +121,35 @@ const DetailsPage = () => {
             <div className="flex items-center gap-3 my-3 text-center">
               <p>Status: {data?.status}</p>
               <span>|</span>
-              <p>Release Date: {moment(data?.release_date).format("YYYY")}</p>
-              {/* <span>|</span>
               <p>
-                Revenue: {Number(data?.revenue)}
-              </p> */}
+                Release Date:{" "}
+                {data?.releaseDate
+                  ? moment(data.releaseDate).format("YYYY")
+                  : "N/A"}
+              </p>
             </div>
             <Divider />
-            <p>Episode Number: {data?.number_of_episodes}</p>
-            <Divider />
+            {mediaType === "tvseries" && (
+              <>
+                <p>Episode Number: {data?.numberOfEpisodes}</p>
+                <Divider />
+              </>
+            )}
 
             <div>
               <p>
                 <span className="text-white">Director: </span>
-                {castData?.crew[0]?.name}
+                {data?.director || "N/A"}
               </p>
-
-              {/* <Divider />
-
+              <Divider />
               <p>
-                <span className='text-white'>Writer: {writer}</span>
-              </p> */}
-            </div>
-
-            <Divider />
-            <h2 className="font-bold text-lg">Cast: </h2>
-            <div className="grid grid-cols-[repeat(auto-fit,96px)] gap-5">
-              {castData?.cast
-                ?.filter((el) => el?.profile_path)
-                .map((starCast, index) => {
-                  return (
-                    <div key={"Star Cast" + index}>
-                      <div>
-                        <img
-                          src={imageURL + starCast?.profile_path}
-                          className="w-24 h-24 rounded-full object-cover"
-                        />
-                      </div>
-                      <p className="font-bold text-center text-sm">
-                        {starCast?.name}
-                      </p>
-                    </div>
-                  );
-                })}
+                <span className="text-white">Studio: </span>
+                {data?.studio || "N/A"}
+              </p>
             </div>
           </div>
         </div>
       </div>
-
-      <div className="container mx-auto px-3">
-        {/* <h2 className='text-lg lg:text-2xl font-bold mb-3'>
-          Star Cast:
-        </h2> */}
-      </div>
-
-      <div>
-        <HorizontalScrollCard
-          data={similarData}
-          heading={"Similar " + params?.explore}
-          media_type={params?.explore}
-        />
-        <HorizontalScrollCard
-          data={recommendationData}
-          heading={"recommendation " + params?.explore}
-          media_type={params?.explore}
-        />
-      </div>
-
-      {playVideo && (
-        <VideoPlay
-          data={playVideoId}
-          close={() => setPlayVideo(false)}
-          media_type={params?.explore}
-        />
-      )}
     </div>
   );
 };

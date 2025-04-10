@@ -7,7 +7,8 @@ import SearchPage from "../pages/SearchPage";
 import AuthPage from "../pages/AuthPage";
 import Watchlist from "../pages/Watchlist";
 import UploadMovie from "../pages/UploadMovie";
-import UploadTvSeries from "../pages/UploadTvSeries";
+import CreateTvSeries from "../pages/CreateTvSeries";
+import AddEpisode from "../pages/AddEpisode";
 
 const router = createBrowserRouter([
     {
@@ -43,8 +44,12 @@ const router = createBrowserRouter([
                 element: <UploadMovie/>
             },
             {
-                path: "upload-tv-series",
-                element: <UploadTvSeries/>
+                path: "create-tv-series",
+                element: <CreateTvSeries/>
+            },
+            {
+                path: "add-episode",
+                element: <AddEpisode/>
             }
         ]
     }

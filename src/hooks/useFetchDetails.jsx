@@ -1,26 +1,31 @@
-import axios from "axios"
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react";
+import axios from "axios";
 
-        const useFetchDetails = (endpoint) => {
-            const [data, setData] = useState()
-            const [loading, setLoading] = useState(false)
+const useFetchDetails = (mediaType, id) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-            const fetchData = async () => {
-                try {
-                    setLoading(true)
-                    const respone = await axios.get(endpoint)
-                    setLoading(false)
-                    setData(respone.data)
-                } catch (error) {
-                    console.log("error: ", error)
-                }
-            }
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Gọi đúng endpoint: /api/movie/{id} hoặc /api/tvseries/{id}
+        const endpoint =
+          mediaType === "movie" ? `/api/movie/${id}` : `/api/tvseries/${id}`;
+        const response = await axios.get(`http://localhost:5116${endpoint}`);
+        setData(response.data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-            useEffect(() => {
-                fetchData()
-            }, [endpoint])
+    fetchData();
+  }, [mediaType, id]);
 
-            return { data, loading }
-        }
+  return { data, loading, error };
+};
 
-export default useFetchDetails
+export default useFetchDetails;

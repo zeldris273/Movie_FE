@@ -11,7 +11,7 @@ const ExplorePage = () => {
 
   const fetchData = async () => {
     try {
-      const respone = await axios.get(`/discover/${params.explore}`, {
+      const respone = await axios.get(`http://localhost:5116/api/search/${params.explore}`, {
         params: {
           page: pageNo
         }
