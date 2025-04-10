@@ -3,7 +3,7 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import Swal from "sweetalert2";
 
-export default function UploadMovie() {
+export default function CreateMovie() {
   const [formData, setFormData] = useState({
     title: "",
     overview: "",
@@ -149,7 +149,7 @@ export default function UploadMovie() {
 
     try {
       const response = await axios.post(
-        "http://localhost:5116/api/movies/upload",
+        "http://localhost:5116/api/movies/create",
         uploadData,
         {
           headers: {
@@ -207,7 +207,7 @@ export default function UploadMovie() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="bg-red-600 text-white p-6 rounded-lg shadow-lg">
-          <p className="text-lg font-semibold">Bạn không có quyền upload video!</p>
+          <p className="text-lg font-semibold">Bạn không có quyền!</p>
         </div>
       </div>
     );
@@ -266,7 +266,7 @@ export default function UploadMovie() {
       <main className="max-w-2xl mx-auto py-8 px-4">
         <div className="bg-gray-800 rounded-lg shadow-lg p-6 space-y-6">
           <h2 className="text-xl font-semibold text-center text-white">
-            Upload Movie
+            Create Movie
           </h2>
 
           {/* Form Inputs */}

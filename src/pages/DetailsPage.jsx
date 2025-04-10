@@ -5,6 +5,7 @@ import moment from "moment";
 import Divider from "../components/Divider";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
+import VideoPlay from "../components/VideoPlay";
 
 const DetailsPage = () => {
   const params = useParams();
@@ -12,6 +13,8 @@ const DetailsPage = () => {
   const id = params?.id;
 
   const { data, loading, error } = useFetchDetails(mediaType, id);
+  const [playVideo, setPlayVideo] = useState(false);
+  const [playVideoId, setPlayVideoId] = useState("");
 
   if (loading) {
     return <div className="text-white text-center">Loading...</div>;
@@ -25,9 +28,19 @@ const DetailsPage = () => {
     return <div className="text-white text-center">No data found.</div>;
   }
 
+  const handlePlayVideo = (data) => {
+    setPlayVideoId(data);
+    setPlayVideo(true);
+  };
+
+  const handlePlayNow = () => {
+    console.log("Play Now clicked for", data.title);
+    // TODO: Thêm logic để phát phim/series (nếu có API video)
+  };
+
   return (
     <div>
-      {/* Thêm lại backdrop_img */}
+      {/* Backdrop image */}
       <div className="w-full h-[280px] relative hidden lg:block">
         <div className="w-full h-full">
           {data?.backdropUrl ? (
@@ -58,6 +71,18 @@ const DetailsPage = () => {
               No Image Found
             </div>
           )}
+          <button
+            onClick={() => handlePlayVideo(data)}
+            className="mt-5 w-full py-2 px-4 text-center bg-white text-black rounded font-bold text-lg hover:bg-gradient-to-l from-red-500 to-orange-500 hover:scale-105 transition-all"
+          >
+            Watch Trailer
+          </button>
+          <button
+            onClick={handlePlayNow}
+            className="mt-5 w-full py-2 px-4 text-center bg-white text-black rounded font-bold text-lg hover:bg-gradient-to-l from-red-500 to-orange-500 hover:scale-105 transition-all"
+          >
+            Play Now
+          </button>
           <button
             className="flex flex-col items-center justify-center gap-1 w-full cursor-pointer
                     px-3 py-2 border border-black rounded-lg 
@@ -150,6 +175,15 @@ const DetailsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal phát trailer */}
+      {playVideo && (
+        <VideoPlay
+          data={playVideoId}
+          close={() => setPlayVideo(false)}
+          media_type={params?.explore}
+        />
+      )}
     </div>
   );
 };

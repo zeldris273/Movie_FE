@@ -60,11 +60,11 @@ const Header = () => {
     navigate("/Watch-List");
   };
 
-  const handleUploadMovie = () => {
-    navigate("/upload-movie");
+  const handleCreateMovie = () => {
+    navigate("/create-movie");
   };
 
-  const handleUploadTvSeries = () => {
+  const handleCreateTvSeries = () => {
     navigate("/create-tv-series");
   };
 
@@ -124,13 +124,13 @@ const Header = () => {
                 {isAdmin ? (
                   <div>
                     <button
-                    onClick={handleUploadMovie}
+                    onClick={handleCreateMovie}
                     className="block w-full text-left px-4 py-2 hover:bg-neutral-600"
                   >
                     Upload Movie
                   </button>
                   <button
-                    onClick={handleUploadTvSeries}
+                    onClick={handleCreateTvSeries}
                     className="block w-full text-left px-4 py-2 hover:bg-neutral-600"
                   >
                     Create Tv Series
