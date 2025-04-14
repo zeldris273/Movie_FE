@@ -127,7 +127,7 @@ const Header = () => {
                     onClick={handleCreateMovie}
                     className="block w-full text-left px-4 py-2 hover:bg-neutral-600"
                   >
-                    Upload Movie
+                    Create Movie
                   </button>
                   <button
                     onClick={handleCreateTvSeries}
