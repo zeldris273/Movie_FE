@@ -1,41 +1,113 @@
-import React, { useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import useFetchDetails from "../hooks/useFetchDetails";
 import moment from "moment";
 import Divider from "../components/Divider";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
 import VideoPlay from "../components/VideoPlay";
+import axios from "axios";
 
 const DetailsPage = () => {
   const params = useParams();
+  const navigate = useNavigate();
   const mediaType = params?.explore; // "movie" hoặc "tvseries"
   const id = params?.id;
 
   const { data, loading, error } = useFetchDetails(mediaType, id);
   const [playVideo, setPlayVideo] = useState(false);
   const [playVideoId, setPlayVideoId] = useState("");
+  const [episodes, setEpisodes] = useState([]); // Lưu danh sách episodes cho TvSeries
+  const [episodeError, setEpisodeError] = useState(null); // Thêm state để lưu lỗi
+
+  // Lấy danh sách episodes nếu là TvSeries
+  useEffect(() => {
+    const fetchEpisodes = async () => {
+      if (mediaType !== "tvseries" || !id) {
+        console.log("Not fetching episodes: mediaType is not tvseries or id is missing", { mediaType, id });
+        return;
+      }
+
+      try {
+        console.log("Fetching seasons for TV series ID:", id);
+        // Lấy danh sách seasons
+        const seasonsResponse = await axios.get(
+          `http://localhost:5116/api/tvseries/${id}/seasons`
+        );
+        const seasons = seasonsResponse.data;
+        console.log("Seasons response:", seasons);
+
+        if (seasons.length > 0) {
+          console.log("Fetching episodes for season ID:", seasons[0].id);
+          // Lấy episodes từ season đầu tiên
+          const episodesResponse = await axios.get(
+            `http://localhost:5116/api/tvseries/seasons/${seasons[0].id}/episodes` // Sửa URL API
+          );
+          console.log("Episodes response:", episodesResponse.data);
+          setEpisodes(episodesResponse.data);
+
+          if (episodesResponse.data.length === 0) {
+            setEpisodeError("No episodes found for this season.");
+            console.log("No episodes found for season ID:", seasons[0].id);
+          }
+        } else {
+          setEpisodeError("No seasons found for this series.");
+          console.log("No seasons found for TV series ID:", id);
+        }
+      } catch (err) {
+        console.error("Error fetching episodes:", err);
+        if (err.response) {
+          console.log("Error response status:", err.response.status);
+          console.log("Error response data:", err.response.data);
+          setEpisodeError(
+            err.response.status === 404
+              ? "Season not found or no episodes available."
+              : "Failed to fetch episodes."
+          );
+        } else {
+          console.log("Error message:", err.message);
+          setEpisodeError("Failed to fetch episodes due to network or server error.");
+        }
+      }
+    };
+
+    fetchEpisodes();
+  }, [mediaType, id]);
 
   if (loading) {
     return <div className="text-white text-center">Loading...</div>;
   }
 
   if (error) {
+    console.log("Error from useFetchDetails:", error);
     return <div className="text-white text-center">Error: {error}</div>;
   }
 
   if (!data) {
+    console.log("No data returned from useFetchDetails");
     return <div className="text-white text-center">No data found.</div>;
   }
 
   const handlePlayVideo = (data) => {
+    console.log("Playing trailer for data:", data);
     setPlayVideoId(data);
     setPlayVideo(true);
   };
 
   const handlePlayNow = () => {
-    console.log("Play Now clicked for", data.title);
-    // TODO: Thêm logic để phát phim/series (nếu có API video)
+    if (mediaType === "movie") {
+      console.log("Navigating to movie player for movie ID:", data.id);
+      navigate(`/movie/${data.id}`);
+    } else if (mediaType === "tvseries") {
+      const firstEpisode = episodes[0];
+      if (firstEpisode) {
+        console.log("Navigating to TV series player for series ID:", data.id, "and episode ID:", firstEpisode.id);
+        navigate(`/tv/${data.id}/${firstEpisode.id}`);
+      } else {
+        console.error("No episodes found for this series.");
+        alert(episodeError || "No episodes available to play.");
+      }
+    }
   };
 
   return (
@@ -99,7 +171,7 @@ const DetailsPage = () => {
 
           <Divider />
           <div className="flex items-center my-3 gap-3">
-            {data?.rating != null && (
+            {data?.rating > 0 && (
               <>
                 <p>Rating: </p>
                 <div className="w-8 h-8">
@@ -132,14 +204,18 @@ const DetailsPage = () => {
             <Divider />
 
             <div className="flex gap-2">
-              {data?.genres?.split(", ").map((genre, index) => (
-                <span
-                  key={"Genre" + index}
-                  className="bg-gray-700/60 text-white text-xs font-bold px-2 py-1 rounded-md"
-                >
-                  {genre}
-                </span>
-              ))}
+              {data?.genres && typeof data.genres === "string" ? (
+                data.genres.split(", ").map((genre, index) => (
+                  <span
+                    key={"Genre" + index}
+                    className="bg-gray-700/60 text-white text-xs font-bold px-2 py-1 rounded-md"
+                  >
+                    {genre}
+                  </span>
+                ))
+              ) : (
+                <span className="text-gray-400">No genres available</span>
+              )}
             </div>
 
             <Divider />
@@ -176,7 +252,6 @@ const DetailsPage = () => {
         </div>
       </div>
 
-      {/* Modal phát trailer */}
       {playVideo && (
         <VideoPlay
           data={playVideoId}
