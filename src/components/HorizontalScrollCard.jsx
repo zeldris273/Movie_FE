@@ -19,7 +19,7 @@ const HorizontalScrollCard = ({ data = [], heading, trending, media_type }) => {
             <h2 className='text-xl lg:text-2xl font-bold mb-3 text-white capitalize'>{heading}</h2>
 
             <div className='relative'>
-                <div ref={containerRef} className='grid grid-cols-[repeat(auto-fit,260px)] grid-flow-col overflow-x-scroll overflow-hidden gap-12 z-10 relative scroll-smooth transition-all scrollbar-none'>
+                <div ref={containerRef} className='grid grid-cols-[repeat(auto-fit,230px)] grid-flow-col overflow-x-scroll overflow-hidden gap-6 z-10 relative scroll-smooth transition-all scrollbar-none'>
                     {
                         data.map((data, index) => {
                             return (
@@ -34,7 +34,7 @@ const HorizontalScrollCard = ({ data = [], heading, trending, media_type }) => {
                         <FaAngleLeft/>
                     </button>
 
-                    <button onClick={handleNext} className='bg-white p-1 text-black rounded-full mr-5 z-10'>
+                    <button onClick={handleNext} className='bg-white p-1 text-black rounded-full -mr-2 z-10'>
                         <FaAngleRight/>
                     </button>
                 </div>

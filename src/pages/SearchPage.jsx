@@ -7,9 +7,7 @@ const SearchPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [data, setData] = useState([]);
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [totalPages, setTotalPages] = useState(0);
   const query = location?.search?.slice(3)?.split("%20")?.join(" ") || "";
 
   const fetchData = async () => {
@@ -20,11 +18,10 @@ const SearchPage = () => {
       const response = await axios.get("http://localhost:5116/api/search/all", {
         params: {
           title: query,
-          page,
         },
       });
+      console.log("Search results: ", response.data.results);
       setData((prev) => [...prev, ...response.data.results]);
-      setTotalPages(response.data.total_pages);
     } catch (error) {
       console.error("Error fetching search results: ", error);
     } finally {
@@ -33,31 +30,26 @@ const SearchPage = () => {
   };
 
   useEffect(() => {
-    setPage(1);
     setData([]);
     fetchData();
   }, [location?.search]);
 
-  useEffect(() => {
-    if (page > 1) {
-      fetchData();
-    }
-  }, [page]);
+  
 
-  useEffect(() => {
-    const handleScroll = () => {
-      if (
-        window.innerHeight + window.scrollY >= document.body.offsetHeight &&
-        page < totalPages &&
-        !loading
-      ) {
-        setPage((prev) => prev + 1);
-      }
-    };
+  // useEffect(() => {
+  //   const handleScroll = () => {
+  //     if (
+  //       window.innerHeight + window.scrollY >= document.body.offsetHeight &&
+  //       page < totalPages &&
+  //       !loading
+  //     ) {
+  //       setPage((prev) => prev + 1);
+  //     }
+  //   };
 
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [page, totalPages, loading]);
+  //   window.addEventListener("scroll", handleScroll);
+  //   return () => window.removeEventListener("scroll", handleScroll);
+  // }, [page, totalPages, loading]);
 
   const handleSearch = (e) => {
     const value = e.target.value;
@@ -65,21 +57,21 @@ const SearchPage = () => {
   };
 
   return (
-    <div className="pt-16">
+    <div className="py-16">
       <div className="lg:hidden my-2 mx-1 sticky top-[70px] z-30">
         <input
           type="text"
           placeholder="Search here..."
           onChange={handleSearch}
           value={query}
-          className="px-4 py-1 text-lg w-full bg-white rounded-full"
+          className="px-4 py-1 text-lg w-full bg-white rounded-full text-neutral-900"
         />
       </div>
       <div className="container mx-auto">
         <h3 className="capitalize text-lg lg:text-xl font-semibold my-3">
           {query ? `Search Results for "${query}"` : "Search Results"}
         </h3>
-        <div className="grid grid-cols-[repeat(auto-fit,260px)] gap-6 justify-center lg:justify-start text-neutral-900">
+        <div className="grid grid-cols-[repeat(auto-fit,230px)] gap-6 justify-center lg:justify-start">
           {data.map((searchData) => (
             <Card
               data={searchData}

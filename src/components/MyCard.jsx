@@ -9,13 +9,11 @@ const Card = ({ data, trending, index, media_type }) => {
   return (
     <Link
       to={`/${mediaType}/${data.id}`}
-      className="w-full min-w-[250px] max-w-[250px] h-80 overflow-hidden block rounded relative hover:scale-105 transition-all"
-    >
-      {data?.imageUrl ? (
+      className='w-full min-w-[230px] max-w-[230px] h-80 overflow-hidden block rounded relative hover:scale-105 transition-all'>
+      {data?.posterUrl ? (
         <img
-          src={data.imageUrl}
+          src={data.posterUrl}
           alt={data.title}
-          className="w-full h-full object-cover"
         />
       ) : (
         <div className="bg-neutral-800 h-full w-full flex justify-center items-center">

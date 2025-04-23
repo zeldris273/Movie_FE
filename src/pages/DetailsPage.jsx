@@ -11,7 +11,7 @@ import axios from "axios";
 const DetailsPage = () => {
   const params = useParams();
   const navigate = useNavigate();
-  const mediaType = params?.explore; // "movie" hoặc "tvseries"
+  const mediaType = params?.explore; // "movie" hoặc "tv"
   const id = params?.id;
 
   const { data, loading, error } = useFetchDetails(mediaType, id);
@@ -23,14 +23,13 @@ const DetailsPage = () => {
   // Lấy danh sách episodes nếu là TvSeries
   useEffect(() => {
     const fetchEpisodes = async () => {
-      if (mediaType !== "tvseries" || !id) {
-        console.log("Not fetching episodes: mediaType is not tvseries or id is missing", { mediaType, id });
+      if (mediaType !== "tv" || !id) { // Sửa: Kiểm tra mediaType === "tv"
+        console.log("Not fetching episodes: mediaType is not tv or id is missing", { mediaType, id });
         return;
       }
 
       try {
         console.log("Fetching seasons for TV series ID:", id);
-        // Lấy danh sách seasons
         const seasonsResponse = await axios.get(
           `http://localhost:5116/api/tvseries/${id}/seasons`
         );
@@ -39,9 +38,8 @@ const DetailsPage = () => {
 
         if (seasons.length > 0) {
           console.log("Fetching episodes for season ID:", seasons[0].id);
-          // Lấy episodes từ season đầu tiên
           const episodesResponse = await axios.get(
-            `http://localhost:5116/api/tvseries/seasons/${seasons[0].id}/episodes` // Sửa URL API
+            `http://localhost:5116/api/tvseries/seasons/${seasons[0].id}/episodes`
           );
           console.log("Episodes response:", episodesResponse.data);
           setEpisodes(episodesResponse.data);
@@ -98,7 +96,7 @@ const DetailsPage = () => {
     if (mediaType === "movie") {
       console.log("Navigating to movie player for movie ID:", data.id);
       navigate(`/movie/${data.id}`);
-    } else if (mediaType === "tvseries") {
+    } else if (mediaType === "tv") { // Sửa: Kiểm tra mediaType === "tv"
       const firstEpisode = episodes[0];
       if (firstEpisode) {
         console.log("Navigating to TV series player for series ID:", data.id, "and episode ID:", firstEpisode.id);
@@ -132,9 +130,9 @@ const DetailsPage = () => {
 
       <div className="container mx-auto px-3 py-20 lg:py-0 flex flex-col lg:flex-row gap-5 lg:gap-10">
         <div className="relative mx-auto w-fit lg:mx-0 min-w-60 lg:-mt-28">
-          {data?.imageUrl ? (
+          {data?.posterUrl ? (
             <img
-              src={data.imageUrl}
+              src={data.posterUrl}
               className="h-80 w-60 object-cover rounded"
               alt={data.title}
             />
@@ -205,14 +203,17 @@ const DetailsPage = () => {
 
             <div className="flex gap-2">
               {data?.genres && typeof data.genres === "string" ? (
-                data.genres.split(", ").map((genre, index) => (
-                  <span
-                    key={"Genre" + index}
-                    className="bg-gray-700/60 text-white text-xs font-bold px-2 py-1 rounded-md"
-                  >
-                    {genre}
-                  </span>
-                ))
+                data.genres
+                  .replace(/\s*,\s*/g, ",") // Chuẩn hóa: loại bỏ khoảng trắng thừa quanh dấu phẩy
+                  .split(",") // Tách chuỗi dựa trên dấu phẩy
+                  .map((genre, index) => (
+                    <span
+                      key={"Genre" + index}
+                      className="bg-gray-700/60 text-white text-xs font-bold px-2 py-1 rounded-md"
+                    >
+                      {genre.trim()} {/* Loại bỏ khoảng trắng thừa ở đầu và cuối */}
+                    </span>
+                  ))
               ) : (
                 <span className="text-gray-400">No genres available</span>
               )}
@@ -230,7 +231,7 @@ const DetailsPage = () => {
               </p>
             </div>
             <Divider />
-            {mediaType === "tvseries" && (
+            {mediaType === "tv" && ( // Sửa: Kiểm tra mediaType === "tv"
               <>
                 <p>Episode Number: {data?.numberOfEpisodes}</p>
                 <Divider />

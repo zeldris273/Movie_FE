@@ -12,7 +12,7 @@ const useFetchDetails = (mediaType, id) => {
       try {
         // Gọi đúng endpoint: /api/movie/{id} hoặc /api/tvseries/{id}
         const endpoint =
-          mediaType === "movie" ? `/api/movie/${id}` : `/api/tvseries/${id}`;
+          mediaType === "movie" ? `/api/movies/${id}` : `/api/tvseries/${id}`;
         const response = await axios.get(`http://localhost:5116${endpoint}`);
         setData(response.data);
       } catch (err) {

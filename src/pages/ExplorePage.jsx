@@ -12,6 +12,7 @@ const ExplorePage = () => {
       const endpoint = params.explore === "tv" ? "tvseries" : "movies";
       const response = await axios.get(`http://localhost:5116/api/${endpoint}`);
       setData(response.data);
+      console.log("response: ", response.data);
     } catch (error) {
       console.log("error: ", error);
     }
@@ -28,7 +29,7 @@ const ExplorePage = () => {
           Popular {params.explore} Show
         </h3>
 
-        <div className="grid grid-cols-[repeat(auto-fit,260px)] gap-6 justify-center lg:justify-start">
+        <div className="grid grid-cols-[repeat(auto-fit,230px)] gap-6 justify-center lg:justify-start">
           {data.map((exploreData, index) => (
             <Card
               data={exploreData}
