@@ -1,7 +1,7 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import Card from "../components/MyCard";
+import Card from "../components/Card";
 
 const SearchPage = () => {
   const location = useLocation();
