@@ -1,20 +1,22 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import moment from "moment";
-import { FaStar } from "react-icons/fa";
+import React from 'react';
+import { Link } from 'react-router-dom';
+import moment from 'moment';
+import { FaStar } from 'react-icons/fa';
 
 const Card = ({ data, trending, index, media_type }) => {
-  const mediaType = data.type?.toLowerCase() ?? media_type;
+  // Chuẩn hóa mediaType để khớp với route
+  const mediaType = media_type === 'movie' ? 'movies' : 'tv';
+
+  // Backend đã xử lý slug, chỉ cần truyền title (có thể là bất kỳ giá trị, backend bỏ qua)
+  const titlePlaceholder = data.title ? data.title.toLowerCase().replace(/\s+/g, '-') : 'untitled';
 
   return (
     <Link
-      to={`/${mediaType}/${data.id}`}
-      className='w-full min-w-[230px] max-w-[230px] h-80 overflow-hidden block rounded relative hover:scale-105 transition-all'>
+      to={`/${mediaType}/${data.id}/${titlePlaceholder}`} // Điều hướng đúng: /movies/:id/:title hoặc /tv/:id/:title
+      className="w-full min-w-[230px] max-w-[230px] h-80 overflow-hidden block rounded relative hover:scale-105 transition-all"
+    >
       {data?.posterUrl ? (
-        <img
-          src={data.posterUrl}
-          alt={data.title}
-        />
+        <img src={data.posterUrl} alt={data.title} />
       ) : (
         <div className="bg-neutral-800 h-full w-full flex justify-center items-center">
           No Image Found
@@ -31,18 +33,17 @@ const Card = ({ data, trending, index, media_type }) => {
 
       <div className="absolute bottom-0 h-14 backdrop-blur-3xl w-full bg-black/60 p-2">
         <h2 className="text-ellipsis line-clamp-1 text-lg font-semibold">
-          {data?.title} {/* Chỉ dùng title */}
+          {data?.title}
         </h2>
         <div className="text-sm text-neutral-400 flex justify-between">
           <p>
             {data.releaseDate
-              ? moment(data.releaseDate).format("MMMM Do YYYY")
-              : "N/A"}{" "}
-            {/* Định dạng releaseDate */}
+              ? moment(data.releaseDate).format('MMMM Do YYYY')
+              : 'N/A'}
           </p>
-          {data.rating != null && ( // Chỉ hiển thị rating nếu không phải null
+          {data.rating != null && (
             <div className="flex gap-1 bg-black px-1 rounded-full text-xs items-center text-white">
-              <FaStar style={{ transform: "translateY(-1px)" }} />
+              <FaStar style={{ transform: 'translateY(-1px)' }} />
               <p>{Number(data.rating).toFixed(1)}</p>
             </div>
           )}

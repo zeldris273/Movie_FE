@@ -12,52 +12,64 @@ import AddEpisode from "../pages/AddEpisode";
 import MoviePlayer from "../pages/MoviePlayer";
 
 const router = createBrowserRouter([
-    {
-        path: "/",
-        element: <App/>,
-        children: [
-            {
-                path: "",
-                element: <Home/>
-            },
-            {
-                path: ":explore",
-                element: <ExplorePage/>
-            },
-            {
-                path: ":explore/:id",
-                element: <DetailsPage/>
-            },
-            {
-                path: "search",
-                element: <SearchPage/>
-            },
-            {
-                path: "auth",
-                element: <AuthPage/>
-            },
-            {
-                path: "Watch-List",
-                element: <Watchlist/>
-            },
-            {
-                path: "create-movie",
-                element: <CreateMovie/>
-            },
-            {
-                path: "create-tv-series",
-                element: <CreateTvSeries/>
-            },
-            {
-                path: "add-episode",
-                element: <AddEpisode/>
-            },
-            {
-                path: "tv/:seriesId/:episodeId",
-                element: <MoviePlayer />,
-            },
-        ]
-    }
-])
+  {
+    path: "/",
+    element: <App />,
+    children: [
+      {
+        path: "",
+        element: <Home />,
+      },
+      {
+        path: "movies", // Trang khám phá cho movies
+        element: <ExplorePage />,
+      },
+      {
+        path: "tv", // Trang khám phá cho TV series
+        element: <ExplorePage />,
+      },
+      {
+        path: "movies/:id/:title", // Xem chi tiết movie
+        element: <DetailsPage />,
+      },
+      {
+        path: "tv/:id/:title", // Xem chi tiết TV series
+        element: <DetailsPage />,
+      },
+      {
+        path: "movies/:id/watch", // Xem phim movie
+        element: <MoviePlayer />,
+      },
+      {
+        path: "tv/:id/:episodeId/watch", // Xem phim TV series (tập cụ thể)
+        element: <MoviePlayer />,
+      },
+      {
+        path: "search",
+        element: <SearchPage />,
+      },
+      {
+        path: "auth",
+        element: <AuthPage />,
+      },
+      {
+        path: "watchlist", // Đổi "Watch-List" thành "watchlist" cho nhất quán
+        element: <Watchlist />,
+      },
+      {
+        path: "create-movie",
+        element: <CreateMovie />,
+      },
+      {
+        path: "create-tv-series",
+        element: <CreateTvSeries />,
+      },
+      {
+        path: "add-episode",
+        element: <AddEpisode />,
+      },
+    ],
+  },
+]);
 
 export default router;

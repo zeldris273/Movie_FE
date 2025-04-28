@@ -1,108 +1,98 @@
-import React, { useEffect, useState } from "react";
-import { useParams, useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
+import React, { useEffect, useState } from 'react';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const MoviePlayer = () => {
-  const { seriesId, episodeId } = useParams();
+  const { id, episodeId } = useParams(); // id là seriesId (TV) hoặc movieId (movie), episodeId chỉ có trong TV
   const location = useLocation();
   const navigate = useNavigate();
-  const [videoUrl, setVideoUrl] = useState(location.state?.videoUrl || null);
+  const [videoUrl, setVideoUrl] = useState(null);
   const [episodes, setEpisodes] = useState([]);
   const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState("");
+  const [newComment, setNewComment] = useState('');
   const [editCommentId, setEditCommentId] = useState(null);
-  const [editCommentText, setEditCommentText] = useState("");
+  const [editCommentText, setEditCommentText] = useState('');
   const [replyCommentId, setReplyCommentId] = useState(null);
-  const [replyText, setReplyText] = useState("");
+  const [replyText, setReplyText] = useState('');
   const [error, setError] = useState(null);
-  const [menuOpen, setMenuOpen] = useState(null); // Theo dõi trạng thái menu ba chấm
+  const [menuOpen, setMenuOpen] = useState(null);
 
-  // Giả lập ID người dùng hiện tại (có thể lấy từ context/auth)
+  // Xác định mediaType từ URL
+  const mediaType = location.pathname.includes('movies') ? 'movie' : 'tv';
+
+  // Giả lập ID người dùng hiện tại
   const currentUserId = 1;
 
   useEffect(() => {
-    console.log("MoviePlayer mounted with params:", { seriesId, episodeId });
-    console.log("Video URL from location.state:", location.state?.videoUrl);
+    const fetchVideoUrl = async () => {
+      try {
+        // Gọi API /watch để lấy videoUrl
+        const endpoint =
+          mediaType === 'movie'
+            ? `http://localhost:5116/api/movies/${id}/watch`
+            : `http://localhost:5116/api/tvseries/${id}/${episodeId}/watch`;
+        const response = await axios.get(endpoint);
+        setVideoUrl(response.data.videoUrl);
+      } catch (err) {
+        console.error('Error fetching video URL:', err);
+        setError(
+          'Failed to load video: ' +
+            (err.response?.data?.error || err.message)
+        );
+      }
+    };
 
     const fetchEpisodes = async () => {
+      if (mediaType !== 'tv') return; // Chỉ lấy episodes nếu là TV series
+
       try {
-        console.log("Fetching seasons for series ID:", seriesId);
         const seasonResponse = await axios.get(
-          `http://localhost:5116/api/tvseries/${seriesId}/seasons`
+          `http://localhost:5116/api/tvseries/${id}/seasons`
         );
         const seasons = seasonResponse.data;
-        console.log("Seasons response:", seasons);
 
         if (seasons.length > 0) {
-          console.log("Fetching episodes for season ID:", seasons[0].id);
           const episodesResponse = await axios.get(
             `http://localhost:5116/api/tvseries/seasons/${seasons[0].id}/episodes`
           );
-          console.log("Episodes response:", episodesResponse.data);
           setEpisodes(episodesResponse.data);
-
-          if (!videoUrl && episodesResponse.data.length > 0) {
-            const currentEpisode = episodesResponse.data.find(
-              (ep) => ep.id === parseInt(episodeId)
-            );
-            if (currentEpisode) {
-              console.log(
-                "Setting video URL from episodes:",
-                currentEpisode.videoUrl
-              );
-              setVideoUrl(currentEpisode.videoUrl);
-            }
-          }
         } else {
-          console.log("No seasons found for this series.");
-          setError("No seasons found for this series.");
+          setError('No seasons found for this series.');
         }
       } catch (err) {
-        console.error("Error fetching episodes:", err);
-        if (err.response) {
-          console.log("Error response status:", err.response.status);
-          console.log("Error response data:", err.response.data);
-          setError(
-            "Failed to load episodes: " +
-              (err.response.data?.error || err.message)
-          );
-        } else {
-          console.log("Error message:", err.message);
-          setError("Failed to load episodes due to network or server error.");
-        }
+        console.error('Error fetching episodes:', err);
+        setError(
+          'Failed to load episodes: ' +
+            (err.response?.data?.error || err.message)
+        );
       }
     };
 
     const fetchComments = async () => {
       try {
-        const response = await axios.get("http://localhost:5116/api/comments", {
-          params: { tvSeriesId: seriesId, episodeId }
+        const response = await axios.get('http://localhost:5116/api/comments', {
+          params: { tvSeriesId: id, episodeId: mediaType === 'tv' ? episodeId : null },
         });
-        console.log("Comments response:", response.data);
         setComments(response.data);
       } catch (err) {
-        console.error("Error fetching comments:", err);
-        if (err.response) {
-          setError(
-            "Failed to load comments: " +
-              (err.response.data?.error || err.message)
-          );
-        } else {
-          setError("Failed to load comments due to network or server error.");
-        }
+        console.error('Error fetching comments:', err);
+        setError(
+          'Failed to load comments: ' +
+            (err.response?.data?.error || err.message)
+        );
       }
     };
 
+    fetchVideoUrl();
     fetchEpisodes();
     fetchComments();
-  }, [seriesId, episodeId, videoUrl]);
+  }, [id, episodeId, mediaType]);
 
   const handleEpisodeChange = (episode) => {
-    console.log("Changing to episode:", episode);
-    setVideoUrl(episode.videoUrl);
-    navigate(`/tv/${seriesId}/${episode.id}`, {
+    navigate(`/tv/${id}/${episode.id}/watch`, {
       state: { videoUrl: episode.videoUrl },
     });
+    setVideoUrl(episode.videoUrl);
   };
 
   const handleAddComment = async (e) => {
@@ -110,24 +100,21 @@ const MoviePlayer = () => {
     if (!newComment.trim()) return;
 
     try {
-      const response = await axios.post("http://localhost:5116/api/comments", {
+      const response = await axios.post('http://localhost:5116/api/comments', {
         userId: currentUserId,
-        tvSeriesId: parseInt(seriesId),
-        episodeId: parseInt(episodeId),
-        commentText: newComment
+        tvSeriesId: mediaType === 'tv' ? parseInt(id) : null,
+        movieId: mediaType === 'movie' ? parseInt(id) : null,
+        episodeId: mediaType === 'tv' ? parseInt(episodeId) : null,
+        commentText: newComment,
       });
       setComments([...comments, { ...response.data, replies: [] }]);
-      setNewComment("");
+      setNewComment('');
     } catch (err) {
-      console.error("Error adding comment:", err);
-      if (err.response) {
-        setError(
-          "Failed to add comment: " +
-            (err.response.data?.error || err.message)
-        );
-      } else {
-        setError("Failed to add comment due to network or server error.");
-      }
+      console.error('Error adding comment:', err);
+      setError(
+        'Failed to add comment: ' +
+          (err.response?.data?.error || err.message)
+      );
     }
   };
 
@@ -136,44 +123,41 @@ const MoviePlayer = () => {
     if (!replyText.trim()) return;
 
     try {
-      const response = await axios.post("http://localhost:5116/api/comments", {
+      const response = await axios.post('http://localhost:5116/api/comments', {
         userId: currentUserId,
-        tvSeriesId: parseInt(seriesId),
-        episodeId: parseInt(episodeId),
+        tvSeriesId: mediaType === 'tv' ? parseInt(id) : null,
+        movieId: mediaType === 'movie' ? parseInt(id) : null,
+        episodeId: mediaType === 'tv' ? parseInt(episodeId) : null,
         parentCommentId: parentCommentId,
-        commentText: replyText
+        commentText: replyText,
       });
 
       const updatedComments = comments.map((comment) => {
         if (comment.id === parentCommentId) {
           return {
             ...comment,
-            replies: [...comment.replies, response.data]
+            replies: [...comment.replies, response.data],
           };
         }
         return comment;
       });
 
       setComments(updatedComments);
-      setReplyText("");
+      setReplyText('');
       setReplyCommentId(null);
     } catch (err) {
-      console.error("Error replying to comment:", err);
-      if (err.response) {
-        setError(
-          "Failed to reply to comment: " +
-            (err.response.data?.error || err.message)
-        );
-      } else {
-        setError("Failed to reply to comment due to network or server error.");
-      }
+      console.error('Error replying to comment:', err);
+      setError(
+        'Failed to reply to comment: ' +
+          (err.response?.data?.error || err.message)
+      );
     }
   };
 
   const handleEditComment = (comment) => {
     setEditCommentId(comment.id);
     setEditCommentText(comment.commentText);
-    setMenuOpen(null); // Đóng menu sau khi chọn "Sửa"
+    setMenuOpen(null);
   };
 
   const handleUpdateComment = async (e, commentId) => {
@@ -185,7 +169,7 @@ const MoviePlayer = () => {
         `http://localhost:5116/api/comments/${commentId}`,
         {
           userId: currentUserId,
-          commentText: editCommentText
+          commentText: editCommentText,
         }
       );
 
@@ -197,7 +181,7 @@ const MoviePlayer = () => {
           if (comment.replies && comment.replies.length > 0) {
             return {
               ...comment,
-              replies: updateComments(comment.replies)
+              replies: updateComments(comment.replies),
             };
           }
           return comment;
@@ -205,24 +189,20 @@ const MoviePlayer = () => {
 
       setComments(updateComments(comments));
       setEditCommentId(null);
-      setEditCommentText("");
+      setEditCommentText('');
     } catch (err) {
-      console.error("Error updating comment:", err);
-      if (err.response) {
-        setError(
-          "Failed to update comment: " +
-            (err.response.data || err.message)
-        );
-      } else {
-        setError("Failed to update comment due to network or server error.");
-      }
+      console.error('Error updating comment:', err);
+      setError(
+        'Failed to update comment: ' +
+          (err.response?.data?.error || err.message)
+      );
     }
   };
 
   const handleDeleteComment = async (commentId) => {
     try {
       await axios.delete(`http://localhost:5116/api/comments/${commentId}`, {
-        params: { userId: currentUserId }
+        params: { userId: currentUserId },
       });
 
       const removeComment = (commentsList) =>
@@ -230,21 +210,17 @@ const MoviePlayer = () => {
           .filter((comment) => comment.id !== commentId)
           .map((comment) => ({
             ...comment,
-            replies: comment.replies ? removeComment(comment.replies) : []
+            replies: comment.replies ? removeComment(comment.replies) : [],
           }));
 
       setComments(removeComment(comments));
-      setMenuOpen(null); // Đóng menu sau khi chọn "Xóa"
+      setMenuOpen(null);
     } catch (err) {
-      console.error("Error deleting comment:", err);
-      if (err.response) {
-        setError(
-          "Failed to delete comment: " +
-            (err.response.data || err.message)
-        );
-      } else {
-        setError("Failed to delete comment due to network or server error.");
-      }
+      console.error('Error deleting comment:', err);
+      setError(
+        'Failed to delete comment: ' +
+          (err.response?.data?.error || err.message)
+      );
     }
   };
 
@@ -257,7 +233,7 @@ const MoviePlayer = () => {
       <div
         key={comment.id}
         className={`p-4 bg-gray-800 rounded-lg flex flex-col space-y-1 ${
-          level > 0 ? "ml-8 border-l-2 border-gray-700" : ""
+          level > 0 ? 'ml-8 border-l-2 border-gray-700' : ''
         }`}
       >
         <div className="flex items-center justify-between">
@@ -342,7 +318,7 @@ const MoviePlayer = () => {
           }
           className="text-sky-400 hover:text-sky-300 text-sm mt-1 self-start"
         >
-          {replyCommentId === comment.id ? "Cancel Reply" : "Reply"}
+          {replyCommentId === comment.id ? 'Cancel Reply' : 'Reply'}
         </button>
 
         {replyCommentId === comment.id && (
@@ -374,25 +350,23 @@ const MoviePlayer = () => {
   };
 
   if (error) {
-    console.log("Error in MoviePlayer:", error);
     return <div className="text-white text-center">{error}</div>;
   }
 
   if (!videoUrl) {
-    console.log("No video URL provided yet, waiting for episodes...");
     return <div className="text-white text-center">Loading video...</div>;
   }
 
   return (
     <div className="bg-neutral-900 min-h-screen text-white">
       <div className="container mx-auto p-4">
-        <div className="relative w-full" style={{ paddingTop: "40%" }}>
+        <div className="relative w-full" style={{ paddingTop: '40%' }}>
           <video
             key={videoUrl}
             controls
             autoPlay
             className="absolute top-0 left-0 w-full h-full rounded-lg shadow-lg"
-            onError={(e) => console.error("Video playback error:", e)}
+            onError={(e) => console.error('Video playback error:', e)}
           >
             <source src={videoUrl} type="video/mp4" />
             Your browser does not support the video tag.
@@ -400,30 +374,32 @@ const MoviePlayer = () => {
         </div>
       </div>
 
-      <div className="container mx-auto p-4">
-        <h2 className="text-2xl font-bold mb-4">Episodes</h2>
-        <div className="flex overflow-x-auto space-x-4 pb-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
-          {episodes.length > 0 ? (
-            episodes.map((episode) => (
-              <div
-                key={episode.id}
-                onClick={() => handleEpisodeChange(episode)}
-                className={`flex-shrink-0 w-30 p-2 rounded-lg cursor-pointer transition-all ${
-                  episode.id === parseInt(episodeId)
-                    ? "bg-sky-600 border-sky-300"
-                    : "bg-slate-700 hover:bg-slate-600 border-slate-600"
-                }`}
-              >
-                <h3 className="text-sm font-semibold text-center">
-                  Episode {episode.episodeNumber}
-                </h3>
-              </div>
-            ))
-          ) : (
-            <p className="text-gray-400">No episodes available.</p>
-          )}
+      {mediaType === 'tv' && (
+        <div className="container mx-auto p-4">
+          <h2 className="text-2xl font-bold mb-4">Episodes</h2>
+          <div className="flex overflow-x-auto space-x-4 pb-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
+            {episodes.length > 0 ? (
+              episodes.map((episode) => (
+                <div
+                  key={episode.id}
+                  onClick={() => handleEpisodeChange(episode)}
+                  className={`flex-shrink-0 w-30 p-2 rounded-lg cursor-pointer transition-all ${
+                    episode.id === parseInt(episodeId)
+                      ? 'bg-sky-600 border-sky-300'
+                      : 'bg-slate-700 hover:bg-slate-600 border-slate-600'
+                  }`}
+                >
+                  <h3 className="text-sm font-semibold text-center">
+                    Episode {episode.episodeNumber}
+                  </h3>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-400">No episodes available.</p>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="container mx-auto p-4">
         <h2 className="text-2xl font-bold mb-4">Comments</h2>

@@ -76,7 +76,7 @@ const Header = () => {
     <header className="fixed top-0 w-full h-16 bg-black/40 bg-opacity-50 z-40">
       <div className="container mx-auto px-3 flex items-center h-full">
         <Link to="/">
-          <img src={logo} alt="Logo" width={120} />
+          <img src={logo} alt="Logo" width={120}/>
         </Link>
 
         <nav className="hidden lg:flex items-center gap-1 ml-5">
@@ -117,7 +117,7 @@ const Header = () => {
                 <img
                   src={userImg}
                   alt="User"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover bg-gray-300 "
                 />
               </div>
               <div className="absolute top-full right-0 mt-2 w-40 bg-neutral-700 text-white rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out delay-1000 z-50 group-hover:pointer-events-auto">
