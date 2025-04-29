@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const useFetchDetails = (mediaType, id) => {
+const useFetchDetails = (mediaType, id, title) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -10,23 +10,26 @@ const useFetchDetails = (mediaType, id) => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Gọi endpoint mới: /api/movies/{id}/{title} hoặc /api/tvseries/{id}/{title}
-        // Vì backend bỏ qua title, ta dùng placeholder 'details'
         const endpoint =
           mediaType === 'movie'
-            ? `/api/movies/${id}/details`
-            : `/api/tvseries/${id}/details`;
+            ? `/api/movies/${id}/${title}`
+            : `/api/tvseries/${id}/${title}`;
         const response = await axios.get(`http://localhost:5116${endpoint}`);
         setData(response.data);
       } catch (err) {
-        setError(err.message);
+        if (err.response && err.response.status === 404) {
+          // Lấy thông điệp lỗi từ backend
+          setError(err.response.data.error || 'Resource not found');
+        } else {
+          setError('An unexpected error occurred');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [mediaType, id]);
+  }, [mediaType, id, title]);
 
   return { data, loading, error };
 };

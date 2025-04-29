@@ -1,14 +1,21 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import moment from 'moment';
-import { FaStar } from 'react-icons/fa';
+import React from "react";
+import { Link } from "react-router-dom";
+import moment from "moment";
+import { FaStar } from "react-icons/fa";
 
 const Card = ({ data, trending, index, media_type }) => {
   // Chuẩn hóa mediaType để khớp với route
-  const mediaType = media_type === 'movie' ? 'movies' : 'tv';
+  const mediaType = media_type === "movie" ? "movies" : "tv";
 
   // Backend đã xử lý slug, chỉ cần truyền title (có thể là bất kỳ giá trị, backend bỏ qua)
-  const titlePlaceholder = data.title ? data.title.toLowerCase().replace(/\s+/g, '-') : 'untitled';
+  const titlePlaceholder = data.title
+    ? data.title
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "")
+    : "untitled";
+
+    console.log("title:", titlePlaceholder);
 
   return (
     <Link
@@ -38,12 +45,12 @@ const Card = ({ data, trending, index, media_type }) => {
         <div className="text-sm text-neutral-400 flex justify-between">
           <p>
             {data.releaseDate
-              ? moment(data.releaseDate).format('MMMM Do YYYY')
-              : 'N/A'}
+              ? moment(data.releaseDate).format("MMMM Do YYYY")
+              : "N/A"}
           </p>
           {data.rating != null && (
             <div className="flex gap-1 bg-black px-1 rounded-full text-xs items-center text-white">
-              <FaStar style={{ transform: 'translateY(-1px)' }} />
+              <FaStar style={{ transform: "translateY(-1px)" }} />
               <p>{Number(data.rating).toFixed(1)}</p>
             </div>
           )}

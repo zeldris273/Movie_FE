@@ -293,11 +293,11 @@ const MoviePlayer = () => {
               type="text"
               value={editCommentText}
               onChange={(e) => setEditCommentText(e.target.value)}
-              className="flex-1 p-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-sky-400"
+              className="flex-1 p-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-yellow-400"
             />
             <button
               type="submit"
-              className="px-3 py-1 bg-sky-600 rounded-lg hover:bg-sky-500"
+              className="px-3 py-1 bg-yellow-500 rounded-lg hover:bg-yellow-400"
             >
               Save
             </button>
@@ -316,7 +316,7 @@ const MoviePlayer = () => {
           onClick={() =>
             setReplyCommentId(replyCommentId === comment.id ? null : comment.id)
           }
-          className="text-sky-400 hover:text-sky-300 text-sm mt-1 self-start"
+          className="text-yellow-400 hover:text-yellow-300 text-sm mt-1 self-start"
         >
           {replyCommentId === comment.id ? 'Cancel Reply' : 'Reply'}
         </button>
@@ -331,11 +331,11 @@ const MoviePlayer = () => {
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
               placeholder="Add a reply..."
-              className="flex-1 p-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-sky-400"
+              className="flex-1 p-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-yellow-400"
             />
             <button
               type="submit"
-              className="px-3 py-1 bg-sky-600 rounded-lg hover:bg-sky-500"
+              className="px-3 py-1 bg-yellow-500 rounded-lg hover:bg-yellow-400"
             >
               Post Reply
             </button>
@@ -385,7 +385,7 @@ const MoviePlayer = () => {
                   onClick={() => handleEpisodeChange(episode)}
                   className={`flex-shrink-0 w-30 p-2 rounded-lg cursor-pointer transition-all ${
                     episode.id === parseInt(episodeId)
-                      ? 'bg-sky-600 border-sky-300'
+                      ? 'bg-yellow-500 border-yellow-300'
                       : 'bg-slate-700 hover:bg-slate-600 border-slate-600'
                   }`}
                 >
@@ -410,11 +410,11 @@ const MoviePlayer = () => {
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="Add a comment..."
-              className="flex-1 p-3 rounded-lg bg-gray-800 text-white border border-gray-700 focus:outline-none focus:border-sky-400"
+              className="flex-1 p-3 rounded-lg bg-gray-800 text-white border border-gray-700 focus:outline-none focus:border-yellow-400"
             />
             <button
               type="submit"
-              className="px-4 py-2 bg-sky-600 rounded-lg hover:bg-sky-500 transition-all"
+              className="px-4 py-2 bg-yellow-500 rounded-lg hover:bg-yellow-400 transition-all"
             >
               Post
             </button>

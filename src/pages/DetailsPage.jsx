@@ -10,21 +10,18 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 
 const DetailsPage = () => {
-  const { id, title } = useParams(); // Lấy id và title từ URL
+  const { id, title } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Xác định mediaType từ URL
   const mediaType = location.pathname.includes('movies') ? 'movie' : 'tv';
-
-  const { data, loading, error } = useFetchDetails(mediaType, id);
+  const { data, loading, error } = useFetchDetails(mediaType, id, title);
   const [playVideo, setPlayVideo] = useState(false);
   const [playVideoId, setPlayVideoId] = useState('');
   const [episodes, setEpisodes] = useState([]);
   const [episodeError, setEpisodeError] = useState(null);
   const [isInWatchList, setIsInWatchList] = useState(false);
 
-  // Kiểm tra xem media đã có trong watchlist chưa
   useEffect(() => {
     const checkWatchList = async () => {
       const token = localStorage.getItem('token');
@@ -49,59 +46,41 @@ const DetailsPage = () => {
     checkWatchList();
   }, [id, mediaType]);
 
-  // Lấy danh sách episodes nếu là TvSeries
   useEffect(() => {
     const fetchEpisodes = async () => {
-      if (mediaType !== 'tv' || !id) {
-        console.log('Not fetching episodes: mediaType is not tv or id is missing', { mediaType, id });
-        return;
-      }
+      if (mediaType !== 'tv' || !id) return;
 
       try {
-        console.log('Fetching seasons for TV series ID:', id);
         const seasonsResponse = await axios.get(
           `http://localhost:5116/api/tvseries/${id}/seasons`
         );
         const seasons = seasonsResponse.data;
-        console.log('Seasons response:', seasons);
 
         if (seasons.length > 0) {
-          console.log('Fetching episodes for season ID:', seasons[0].id);
           const episodesResponse = await axios.get(
             `http://localhost:5116/api/tvseries/seasons/${seasons[0].id}/episodes`
           );
-          console.log('Episodes response:', episodesResponse.data);
           setEpisodes(episodesResponse.data);
 
           if (episodesResponse.data.length === 0) {
             setEpisodeError('No episodes found for this season.');
-            console.log('No episodes found for season ID:', seasons[0].id);
           }
         } else {
           setEpisodeError('No seasons found for this series.');
-          console.log('No seasons found for TV series ID:', id);
         }
       } catch (err) {
         console.error('Error fetching episodes:', err);
-        if (err.response) {
-          console.log('Error response status:', err.response.status);
-          console.log('Error response data:', err.response.data);
-          setEpisodeError(
-            err.response.status === 404
-              ? 'Season not found or no episodes available.'
-              : 'Failed to fetch episodes.'
-          );
-        } else {
-          console.log('Error message:', err.message);
-          setEpisodeError('Failed to fetch episodes due to network or server error.');
-        }
+        setEpisodeError(
+          err.response?.status === 404
+            ? 'Season not found or no episodes available.'
+            : 'Failed to fetch episodes.'
+        );
       }
     };
 
     fetchEpisodes();
   }, [mediaType, id]);
 
-  // Xử lý khi nhấn nút "Add to Watch List"
   const handleAddToWatchList = async () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -144,45 +123,30 @@ const DetailsPage = () => {
       }
     } catch (error) {
       console.error('Error adding to watch list:', error);
-      if (error.response) {
-        Swal.fire({
-          title: '',
-          text: error.response.data.error || 'Failed to add to watch list.',
-          icon: 'error',
-          background: '#222222',
-          color: '#fff',
-          confirmButtonColor: '#ffcc00',
-        });
-      } else {
-        Swal.fire({
-          title: '',
-          text: 'Failed to add to watch list due to network error.',
-          icon: 'error',
-          background: '#222222',
-          color: '#fff',
-          confirmButtonColor: '#ffcc00',
-        });
-      }
+      Swal.fire({
+        title: '',
+        text: error.response?.data?.error || 'Failed to add to watch list.',
+        icon: 'error',
+        background: '#222222',
+        color: '#fff',
+        confirmButtonColor: '#ffcc00',
+      });
     }
   };
 
   const handlePlayVideo = (data) => {
-    console.log('Playing trailer for data:', data);
     setPlayVideoId(data);
     setPlayVideo(true);
   };
 
   const handlePlayNow = () => {
     if (mediaType === 'movie') {
-      console.log('Navigating to movie player for movie ID:', data.id);
-      navigate(`/movies/${data.id}/watch`); // Điều hướng đúng: /movies/:id/watch
+      navigate(`/movies/${data.id}/watch`);
     } else if (mediaType === 'tv') {
       const firstEpisode = episodes[0];
       if (firstEpisode) {
-        console.log('Navigating to TV series player for series ID:', data.id, 'and episode ID:', firstEpisode.id);
-        navigate(`/tv/${data.id}/${firstEpisode.id}/watch`); // Điều hướng đúng: /tv/:id/:episodeId/watch
+        navigate(`/tv/${data.id}/${firstEpisode.id}/watch`);
       } else {
-        console.error('No episodes found for this series.');
         Swal.fire({
           title: '',
           text: episodeError || 'No episodes available to play.',
@@ -200,18 +164,41 @@ const DetailsPage = () => {
   }
 
   if (error) {
-    console.log('Error from useFetchDetails:', error);
-    return <div className="text-white text-center">Error: {error}</div>;
+    return (
+      <div className="text-white text-center py-20">
+        <h2 className="text-2xl font-bold">Không tồn tại</h2>
+        <p className="mt-2">
+          {mediaType === 'movie' ? 'Bộ phim' : 'TV series'} này không tồn tại hoặc URL không chính xác.
+        </p>
+        <button
+          onClick={() => navigate('/')}
+          className="mt-4 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-6 00"
+        >
+          Quay lại trang chủ
+        </button>
+      </div>
+    );
   }
 
   if (!data) {
-    console.log('No data returned from useFetchDetails');
-    return <div className="text-white text-center">No data found.</div>;
+    return (
+      <div className="text-white text-center py-20">
+        <h2 className="text-2xl font-bold">Không tồn tại</h2>
+        <p className="mt-2">
+          {mediaType === 'movie' ? 'Bộ phim' : 'TV series'} này không tồn tại.
+        </p>
+        <button
+          onClick={() => navigate('/')}
+          className="mt-4 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-500"
+        >
+          Quay lại trang chủ
+        </button>
+      </div>
+    );
   }
 
   return (
     <div>
-      {/* Backdrop image */}
       <div className="w-full h-[280px] relative hidden lg:block">
         <div className="w-full h-full">
           {data?.backdropUrl ? (
@@ -362,7 +349,7 @@ const DetailsPage = () => {
         <VideoPlay
           data={playVideoId}
           close={() => setPlayVideo(false)}
-          media_type={mediaType} // Sửa params.explore thành mediaType
+          media_type={mediaType}
         />
       )}
     </div>
