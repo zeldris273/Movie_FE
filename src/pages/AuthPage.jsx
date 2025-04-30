@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { FaLock, FaEnvelope } from "react-icons/fa";
 import { useDispatch, useSelector } from "react-redux";
-import { loginUser } from "../store/authSlice";
+import { loginUser, registerUser, logoutUser } from "../store/authSlice";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import Swal from "sweetalert2"; // Import SweetAlert2
+import api from "../api/api";
+import Swal from "sweetalert2";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -29,9 +29,9 @@ export default function AuthPage() {
       title,
       text,
       icon,
-      background: "#222222", // Màu nền tối
-      color: "#fff", // Chữ màu trắng
-      confirmButtonColor: "#ffcc00", // Màu nút OK
+      background: "#222222",
+      color: "#fff",
+      confirmButtonColor: "#ffcc00",
     });
   };
 
@@ -41,7 +41,7 @@ export default function AuthPage() {
       return;
     }
     try {
-      const response = await axios.post("http://localhost:5116/api/auth/send-otp", { email });
+      const response = await api.post("/api/auth/send-otp", { email });
       if (response.status === 200) {
         setIsOtpSent(true);
         showAlert("OTP Sent", "OTP sent to your email. Please check your inbox.", "success");
@@ -66,20 +66,41 @@ export default function AuthPage() {
     try {
       if (isLogin) {
         await dispatch(loginUser({ email, password })).unwrap();
+        console.log('After login, localStorage tokens:', {
+          accessToken: localStorage.getItem('accessToken'),
+          refreshToken: localStorage.getItem('refreshToken'),
+        });
         navigate("/");
       } else {
         if (!isOtpSent) {
           showAlert("OTP Required", "Please send OTP first.", "warning");
           return;
         }
-        const response = await axios.post("http://localhost:5116/api/auth/verify-otp", { email, password, otp });
-        if (response.status === 200) {
-          await dispatch(loginUser({ email, password })).unwrap();
-          navigate("/");
-        }
+        await dispatch(registerUser({ email, password, otp })).unwrap();
+        console.log('After register, localStorage tokens:', {
+          accessToken: localStorage.getItem('accessToken'),
+          refreshToken: localStorage.getItem('refreshToken'),
+        });
+        navigate("/");
       }
     } catch (err) {
-      showAlert("Error", "Invalid OTP or registration failed: " + (err.response?.data || err.message), "error");
+      console.error('Dispatch error:', err);
+      showAlert(
+        "Error",
+        isLogin
+          ? "Invalid credentials: " + (err || "Unknown error")
+          : "Invalid OTP or registration failed: " + (err || "Unknown error"),
+        "error"
+      );
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await dispatch(logoutUser()).unwrap();
+      navigate("/auth");
+    } catch (err) {
+      showAlert("Logout Failed", err || "Unknown error", "error");
     }
   };
 
@@ -146,8 +167,16 @@ export default function AuthPage() {
           >
             {loading ? "Processing..." : isLogin ? "Login" : "Register"}
           </button>
-          {error && <p className="text-red-500 text-center mt-2">{isLogin ? "Invalid credentials" : "Registration failed"}</p>}
-          {!isLogin && isOtpSent && <p className="text-green-500 text-center mt-2">OTP sent to your email. Please check your inbox.</p>}
+          {error && (
+            <p className="text-red-500 text-center mt-2">
+              {isLogin ? "Invalid credentials" : "Registration failed"}: {error}
+            </p>
+          )}
+          {!isLogin && isOtpSent && (
+            <p className="text-green-500 text-center mt-2">
+              OTP sent to your email. Please check your inbox.
+            </p>
+          )}
         </form>
         <p className="text-center mt-4 text-gray-400">
           {isLogin ? "Don't have an account?" : "Already have an account?"}
@@ -161,6 +190,16 @@ export default function AuthPage() {
             {isLogin ? "Sign Up" : "Sign In"}
           </span>
         </p>
+        {isLogin && localStorage.getItem("accessToken") && (
+          <p className="text-center mt-4">
+            <button
+              onClick={handleLogout}
+              className="text-gray-200 cursor-pointer hover:underline"
+            >
+              Logout
+            </button>
+          </p>
+        )}
       </div>
     </div>
   );

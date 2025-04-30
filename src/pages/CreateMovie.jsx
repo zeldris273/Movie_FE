@@ -27,7 +27,7 @@ export default function CreateMovie() {
   }, []);
 
   const checkAdminRole = () => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("accessToken");
     if (!token) {
       Swal.fire({
         title: "Lỗi!",

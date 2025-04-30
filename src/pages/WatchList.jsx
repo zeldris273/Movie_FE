@@ -21,7 +21,7 @@ const Watchlist = () => {
   };
 
   const fetchWatchlist = async () => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("accessToken");
     if (!token) {
       setError("Please log in to view your watch list.");
       setLoading(false);

@@ -1,39 +1,57 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import api from '../api/api';
 
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async ({ email, password }, { rejectWithValue }) => {
     try {
-      const response = await axios.post('http://localhost:5116/api/auth/login', {
+      console.log('Attempting login with:', { email, password });
+      const response = await api.post('/api/auth/login', {
         email,
         password,
       });
-      const token = response.data.token;
-      localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      return { email, token };
+      console.log('Login API response:', response);
+
+      const { accessToken, refreshToken } = response.data;
+      if (!accessToken || !refreshToken) {
+        console.error('Tokens missing in response:', response.data);
+        throw new Error('accessToken or refreshToken missing in response');
+      }
+
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+      console.log('Tokens stored in localStorage:', {
+        accessToken: localStorage.getItem('accessToken'),
+        refreshToken: localStorage.getItem('refreshToken'),
+      });
+
+      return { email, token: accessToken };
     } catch (error) {
-      return rejectWithValue(error.response?.data || 'Login failed');
+      console.error('Login error:', error.response?.data || error.message);
+      return rejectWithValue(error.response?.data || error.message);
     }
   }
 );
 
 export const registerUser = createAsyncThunk(
   'auth/registerUser',
-  async ({ username, password }, { rejectWithValue, dispatch }) => {
+  async ({ email, password, otp }, { rejectWithValue, dispatch }) => {
     try {
-      await axios.post('http://localhost:5116/api/auth/register', {
-        username,
+      console.log('Verifying OTP with:', { email, password, otp });
+      await api.post('/api/auth/verify-otp', {
+        email,
         password,
+        otp,
       });
-      // Tự động đăng nhập sau khi đăng ký
+
+      console.log('OTP verified, proceeding to login');
       const loginResponse = await dispatch(
-        loginUser({ email: username, password })
+        loginUser({ email, password })
       ).unwrap();
       return loginResponse;
     } catch (error) {
-      return rejectWithValue(error.response?.data || 'Register failed');
+      console.error('Register error:', error.response?.data || error.message);
+      return rejectWithValue(error.response?.data || error.message);
     }
   }
 );
@@ -42,11 +60,18 @@ export const logoutUser = createAsyncThunk(
   'auth/logoutUser',
   async (_, { rejectWithValue }) => {
     try {
-      localStorage.removeItem('token');
-      delete axios.defaults.headers.common['Authorization'];
+      const refreshToken = localStorage.getItem('refreshToken');
+      console.log('Logging out with refreshToken:', refreshToken);
+      await api.post('/api/auth/logout', { RefreshToken: refreshToken });
+
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      console.log('Tokens removed from localStorage');
+
       return null;
     } catch (error) {
-      return rejectWithValue('Logout failed');
+      console.error('Logout error:', error.response?.data || error.message);
+      return rejectWithValue(error.response?.data || error.message);
     }
   }
 );
@@ -54,14 +79,18 @@ export const logoutUser = createAsyncThunk(
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
-    user: null,
-    token: localStorage.getItem('token') || null,
+    user: localStorage.getItem('accessToken') ? { email: null } : null,
+    token: localStorage.getItem('accessToken') || null, // Thêm token vào initialState
     loading: false,
     error: null,
   },
-  reducers: {},
+  reducers: {
+    setUser: (state, action) => {
+      state.user = action.payload;
+      state.token = localStorage.getItem('accessToken') || null;
+    },
+  },
   extraReducers: (builder) => {
-    // Login
     builder
       .addCase(loginUser.pending, (state) => {
         state.loading = true;
@@ -70,13 +99,12 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
         state.user = { email: action.payload.email };
-        state.token = action.payload.token;
+        state.token = action.payload.token; // Lưu token vào state
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
-      // Register
       .addCase(registerUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -84,7 +112,7 @@ const authSlice = createSlice({
       .addCase(registerUser.fulfilled, (state, action) => {
         state.loading = false;
         state.user = { email: action.payload.email };
-        state.token = action.payload.token;
+        state.token = action.payload.token; // Lưu token vào state
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.loading = false;
@@ -92,10 +120,15 @@ const authSlice = createSlice({
       })
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null;
-        state.token = null;
+        state.token = null; // Xóa token khi đăng xuất
         state.loading = false;
+      })
+      .addCase(logoutUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });
 
+export const { setUser } = authSlice.actions;
 export default authSlice.reducer;

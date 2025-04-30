@@ -15,7 +15,6 @@ const Card = ({ data, trending, index, media_type }) => {
         .replace(/[^a-z0-9-]/g, "")
     : "untitled";
 
-    console.log("title:", titlePlaceholder);
 
   return (
     <Link

@@ -24,7 +24,7 @@ const DetailsPage = () => {
 
   useEffect(() => {
     const checkWatchList = async () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       if (!token) return;
 
       try {
@@ -82,7 +82,7 @@ const DetailsPage = () => {
   }, [mediaType, id]);
 
   const handleAddToWatchList = async () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (!token) {
       Swal.fire({
         title: '',

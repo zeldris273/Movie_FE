@@ -53,7 +53,7 @@ const router = createBrowserRouter([
         element: <AuthPage />,
       },
       {
-        path: "watchlist", // Đổi "Watch-List" thành "watchlist" cho nhất quán
+        path: "watchlist",
         element: <Watchlist />,
       },
       {
