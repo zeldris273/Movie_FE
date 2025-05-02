@@ -21,27 +21,27 @@ const router = createBrowserRouter([
         element: <Home />,
       },
       {
-        path: "movies", // Trang khám phá cho movies
+        path: "movies",
         element: <ExplorePage />,
       },
       {
-        path: "tv", // Trang khám phá cho TV series
+        path: "tv",
         element: <ExplorePage />,
       },
       {
-        path: "movies/:id/:title", // Xem chi tiết movie
+        path: "movies/:id/:title",
         element: <DetailsPage />,
       },
       {
-        path: "tv/:id/:title", // Xem chi tiết TV series
+        path: "tv/:id/:title",
         element: <DetailsPage />,
       },
       {
-        path: "movies/:id/watch", // Xem phim movie
+        path: "movies/:id/:title/watch",
         element: <MoviePlayer />,
       },
       {
-        path: "tv/:id/:episodeId/watch", // Xem phim TV series (tập cụ thể)
+        path: "tvseries/:id/:title/episode/:episodeNumber/watch",
         element: <MoviePlayer />,
       },
       {

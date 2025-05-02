@@ -25,7 +25,6 @@ const ExplorePage = () => {
       const endpoint = mediaType === 'tv' ? 'tvseries' : 'movies';
       const response = await axios.get(`http://localhost:5116/api/${endpoint}`);
       setData(response.data);
-      console.log('response: ', response.data);
     } catch (error) {
       console.log('error: ', error);
     }

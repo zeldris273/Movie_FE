@@ -20,6 +20,14 @@ const Watchlist = () => {
     });
   };
 
+  const createSlug = (title) => {
+    if (!title) return '';
+    let slug = title.toLowerCase().replace(/\s+/g, '-');
+    slug = slug.replace(/[^a-z0-9-]/g, '');
+    slug = slug.replace(/-+/g, '-');
+    return slug;
+  };
+
   const fetchWatchlist = async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
@@ -44,7 +52,7 @@ const Watchlist = () => {
   };
 
   const handleRemoveFromWatchlist = async (mediaId, mediaType) => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("accessToken");
     if (!token) {
       showAlert("", "Please log in to remove from watch list.", "warning");
       navigate("/auth");
@@ -73,8 +81,9 @@ const Watchlist = () => {
     fetchWatchlist();
   }, []);
 
-  const handleCardClick = (mediaId, mediaType) => {
-    const path = mediaType === "movie" ? `/movies/${mediaId}` : `/tv/${mediaId}`;
+  const handleCardClick = (mediaId, mediaType, title) => {
+    const slug = createSlug(title); // Tạo slug từ title
+    const path = mediaType === "movie" ? `/movies/${mediaId}/${slug}` : `/tv/${mediaId}/${slug}`;
     navigate(path);
   };
 
@@ -89,7 +98,7 @@ const Watchlist = () => {
   return (
     <div className="py-16 bg-neutral-900 min-h-screen">
       <div className="container mx-auto px-5">
-        <h2 className="text-3xl lg:text-2xl font-bold text-white mb-8">
+        <h2 className="text-2xl lg:text-2xl font-bold text-white mb-8">
           My Watch List
         </h2>
 
@@ -105,7 +114,7 @@ const Watchlist = () => {
                 className="relative group"
               >
                 <div
-                  onClick={() => handleCardClick(item.mediaId, item.mediaType)}
+                  onClick={() => handleCardClick(item.mediaId, item.mediaType, item.title)} // Truyền thêm title
                   className="cursor-pointer"
                 >
                   <img

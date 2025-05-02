@@ -41,7 +41,9 @@ export default function AuthPage() {
       return;
     }
     try {
-      const response = await api.post("/api/auth/send-otp", { email });
+      const response = await api.post("/api/auth/send-otp", { email }, {
+        withCredentials: true,
+      });
       if (response.status === 200) {
         setIsOtpSent(true);
         showAlert("OTP Sent", "OTP sent to your email. Please check your inbox.", "success");
@@ -66,9 +68,8 @@ export default function AuthPage() {
     try {
       if (isLogin) {
         await dispatch(loginUser({ email, password })).unwrap();
-        console.log('After login, localStorage tokens:', {
+        console.log('After login, localStorage accessToken:', {
           accessToken: localStorage.getItem('accessToken'),
-          refreshToken: localStorage.getItem('refreshToken'),
         });
         navigate("/");
       } else {
@@ -77,9 +78,8 @@ export default function AuthPage() {
           return;
         }
         await dispatch(registerUser({ email, password, otp })).unwrap();
-        console.log('After register, localStorage tokens:', {
+        console.log('After register, localStorage accessToken:', {
           accessToken: localStorage.getItem('accessToken'),
-          refreshToken: localStorage.getItem('refreshToken'),
         });
         navigate("/");
       }

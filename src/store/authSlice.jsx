@@ -9,20 +9,20 @@ export const loginUser = createAsyncThunk(
       const response = await api.post('/api/auth/login', {
         email,
         password,
+      }, {
+        withCredentials: true // Gửi cookie
       });
       console.log('Login API response:', response);
 
-      const { accessToken, refreshToken } = response.data;
-      if (!accessToken || !refreshToken) {
-        console.error('Tokens missing in response:', response.data);
-        throw new Error('accessToken or refreshToken missing in response');
+      const { accessToken } = response.data;
+      if (!accessToken) {
+        console.error('Access token missing in response:', response.data);
+        throw new Error('accessToken missing in response');
       }
 
       localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
-      console.log('Tokens stored in localStorage:', {
+      console.log('Access token stored in localStorage:', {
         accessToken: localStorage.getItem('accessToken'),
-        refreshToken: localStorage.getItem('refreshToken'),
       });
 
       return { email, token: accessToken };
@@ -60,13 +60,13 @@ export const logoutUser = createAsyncThunk(
   'auth/logoutUser',
   async (_, { rejectWithValue }) => {
     try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      console.log('Logging out with refreshToken:', refreshToken);
-      await api.post('/api/auth/logout', { RefreshToken: refreshToken });
+      console.log('Logging out');
+      await api.post('/api/auth/logout', {}, {
+        withCredentials: true // Gửi cookie để backend xóa
+      });
 
       localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      console.log('Tokens removed from localStorage');
+      console.log('Access token removed from localStorage');
 
       return null;
     } catch (error) {
@@ -80,7 +80,7 @@ const authSlice = createSlice({
   name: 'auth',
   initialState: {
     user: localStorage.getItem('accessToken') ? { email: null } : null,
-    token: localStorage.getItem('accessToken') || null, // Thêm token vào initialState
+    token: localStorage.getItem('accessToken') || null,
     loading: false,
     error: null,
   },
@@ -99,7 +99,7 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
         state.user = { email: action.payload.email };
-        state.token = action.payload.token; // Lưu token vào state
+        state.token = action.payload.token;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
@@ -112,7 +112,7 @@ const authSlice = createSlice({
       .addCase(registerUser.fulfilled, (state, action) => {
         state.loading = false;
         state.user = { email: action.payload.email };
-        state.token = action.payload.token; // Lưu token vào state
+        state.token = action.payload.token;
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.loading = false;
@@ -120,7 +120,7 @@ const authSlice = createSlice({
       })
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null;
-        state.token = null; // Xóa token khi đăng xuất
+        state.token = null;
         state.loading = false;
       })
       .addCase(logoutUser.rejected, (state, action) => {

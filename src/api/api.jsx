@@ -18,28 +18,30 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    console.log('Interceptor caught error:', error); // Log toàn bộ error
+    console.log('Error response:', error.response); // Log error.response
+    console.log('Error status:', error.response?.status); // Log status
+
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post('http://localhost:5116/api/auth/refresh-token', {
-          RefreshToken: refreshToken,
+        console.log('Attempting to refresh token');
+        const response = await axios.post('http://localhost:5116/api/auth/refresh-token', {}, {
+          withCredentials: true
         });
 
-        const { accessToken, refreshToken: newRefreshToken } = response.data;
+        const { accessToken } = response.data;
+        console.log('New access token:', accessToken);
 
         localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', newRefreshToken);
-
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
         console.error('Refresh token failed:', refreshError);
         localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
         window.location.href = '/auth';
         return Promise.reject(refreshError);
       }

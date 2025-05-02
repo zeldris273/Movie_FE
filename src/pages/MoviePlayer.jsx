@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/api'; // Thay axios bằng api
+import Swal from 'sweetalert2'; // Thêm để hiển thị lỗi (tùy chọn)
 
 const MoviePlayer = () => {
-  const { id, episodeId } = useParams(); // id là seriesId (TV) hoặc movieId (movie), episodeId chỉ có trong TV
+  const { id, title, episodeNumber } = useParams(); // Lấy id, title, episodeNumber
   const location = useLocation();
   const navigate = useNavigate();
   const [videoUrl, setVideoUrl] = useState(null);
@@ -26,12 +27,12 @@ const MoviePlayer = () => {
   useEffect(() => {
     const fetchVideoUrl = async () => {
       try {
-        // Gọi API /watch để lấy videoUrl
+        // Gọi API /watch với endpoint mới
         const endpoint =
           mediaType === 'movie'
-            ? `http://localhost:5116/api/movies/${id}/watch`
-            : `http://localhost:5116/api/tvseries/${id}/${episodeId}/watch`;
-        const response = await axios.get(endpoint);
+            ? `/api/movies/${id}/${title}/watch`
+            : `/api/tvseries/${id}/${title}/episode/${episodeNumber}/watch`;
+        const response = await api.get(endpoint);
         setVideoUrl(response.data.videoUrl);
       } catch (err) {
         console.error('Error fetching video URL:', err);
@@ -46,14 +47,12 @@ const MoviePlayer = () => {
       if (mediaType !== 'tv') return; // Chỉ lấy episodes nếu là TV series
 
       try {
-        const seasonResponse = await axios.get(
-          `http://localhost:5116/api/tvseries/${id}/seasons`
-        );
+        const seasonResponse = await api.get(`/api/tvseries/${id}/seasons`);
         const seasons = seasonResponse.data;
 
         if (seasons.length > 0) {
-          const episodesResponse = await axios.get(
-            `http://localhost:5116/api/tvseries/seasons/${seasons[0].id}/episodes`
+          const episodesResponse = await api.get(
+            `/api/tvseries/seasons/${seasons[0].id}/episodes`
           );
           setEpisodes(episodesResponse.data);
         } else {
@@ -70,8 +69,8 @@ const MoviePlayer = () => {
 
     const fetchComments = async () => {
       try {
-        const response = await axios.get('http://localhost:5116/api/comments', {
-          params: { tvSeriesId: id, episodeId: mediaType === 'tv' ? episodeId : null },
+        const response = await api.get('/api/comments', {
+          params: { tvSeriesId: mediaType === 'tv' ? id : null, movieId: mediaType === 'movie' ? id : null, episodeId: mediaType === 'tv' ? episodeNumber : null },
         });
         setComments(response.data);
       } catch (err) {
@@ -86,10 +85,12 @@ const MoviePlayer = () => {
     fetchVideoUrl();
     fetchEpisodes();
     fetchComments();
-  }, [id, episodeId, mediaType]);
+  }, [id, title, episodeNumber, mediaType]);
 
   const handleEpisodeChange = (episode) => {
-    navigate(`/tv/${id}/${episode.id}/watch`, {
+    const slug = title; // Sử dụng title từ URL
+    const newEpisodeNumber = episode.episode_number || episode.episodeNumber || 1; // Xử lý cả hai trường hợp
+    navigate(`/tv/${id}/${slug}/episode-${newEpisodeNumber}/watch`, {
       state: { videoUrl: episode.videoUrl },
     });
     setVideoUrl(episode.videoUrl);
@@ -100,11 +101,11 @@ const MoviePlayer = () => {
     if (!newComment.trim()) return;
 
     try {
-      const response = await axios.post('http://localhost:5116/api/comments', {
+      const response = await api.post('/api/comments', {
         userId: currentUserId,
         tvSeriesId: mediaType === 'tv' ? parseInt(id) : null,
         movieId: mediaType === 'movie' ? parseInt(id) : null,
-        episodeId: mediaType === 'tv' ? parseInt(episodeId) : null,
+        episodeId: mediaType === 'tv' ? parseInt(episodeNumber) : null,
         commentText: newComment,
       });
       setComments([...comments, { ...response.data, replies: [] }]);
@@ -123,11 +124,11 @@ const MoviePlayer = () => {
     if (!replyText.trim()) return;
 
     try {
-      const response = await axios.post('http://localhost:5116/api/comments', {
+      const response = await api.post('/api/comments', {
         userId: currentUserId,
         tvSeriesId: mediaType === 'tv' ? parseInt(id) : null,
         movieId: mediaType === 'movie' ? parseInt(id) : null,
-        episodeId: mediaType === 'tv' ? parseInt(episodeId) : null,
+        episodeId: mediaType === 'tv' ? parseInt(episodeNumber) : null,
         parentCommentId: parentCommentId,
         commentText: replyText,
       });
@@ -165,8 +166,8 @@ const MoviePlayer = () => {
     if (!editCommentText.trim()) return;
 
     try {
-      const response = await axios.put(
-        `http://localhost:5116/api/comments/${commentId}`,
+      const response = await api.put(
+        `/api/comments/${commentId}`,
         {
           userId: currentUserId,
           commentText: editCommentText,
@@ -201,7 +202,7 @@ const MoviePlayer = () => {
 
   const handleDeleteComment = async (commentId) => {
     try {
-      await axios.delete(`http://localhost:5116/api/comments/${commentId}`, {
+      await api.delete(`/api/comments/${commentId}`, {
         params: { userId: currentUserId },
       });
 
@@ -379,21 +380,25 @@ const MoviePlayer = () => {
           <h2 className="text-2xl font-bold mb-4">Episodes</h2>
           <div className="flex overflow-x-auto space-x-4 pb-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
             {episodes.length > 0 ? (
-              episodes.map((episode) => (
-                <div
-                  key={episode.id}
-                  onClick={() => handleEpisodeChange(episode)}
-                  className={`flex-shrink-0 w-30 p-2 rounded-lg cursor-pointer transition-all ${
-                    episode.id === parseInt(episodeId)
-                      ? 'bg-yellow-500 border-yellow-300'
-                      : 'bg-slate-700 hover:bg-slate-600 border-slate-600'
-                  }`}
-                >
-                  <h3 className="text-sm font-semibold text-center">
-                    Episode {episode.episodeNumber}
-                  </h3>
-                </div>
-              ))
+              episodes.map((episode) => {
+                const currentEpisodeNumber = episode.episode_number || episode.episodeNumber || 1;
+                const isActive = episodeNumber && currentEpisodeNumber.toString() === episodeNumber.replace('episode-', '');
+                return (
+                  <div
+                    key={episode.id}
+                    onClick={() => handleEpisodeChange(episode)}
+                    className={`flex-shrink-0 w-30 p-2 rounded-lg cursor-pointer transition-all ${
+                      isActive
+                        ? 'bg-yellow-500 border-yellow-300'
+                        : 'bg-slate-700 hover:bg-slate-600 border-slate-600'
+                    }`}
+                  >
+                    <h3 className="text-sm font-semibold text-center">
+                      Episode {currentEpisodeNumber}
+                    </h3>
+                  </div>
+                );
+              })
             ) : (
               <p className="text-gray-400">No episodes available.</p>
             )}

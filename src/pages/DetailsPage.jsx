@@ -6,21 +6,40 @@ import Divider from '../components/Divider';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import VideoPlay from '../components/VideoPlay';
-import axios from 'axios';
+import api from '../api/api'; // Sử dụng instance api
 import Swal from 'sweetalert2';
+import { FaStar } from 'react-icons/fa';
+
+// Hàm chuyển đổi tiêu đề thành slug (tương tự logic backend)
+const createSlug = (title) => {
+  if (!title) return '';
+  let slug = title.toLowerCase().replace(/\s+/g, '-');
+  slug = slug.replace(/[^a-z0-9-]/g, '');
+  slug = slug.replace(/-+/g, '-');
+  return slug;
+};
 
 const DetailsPage = () => {
-  const { id, title } = useParams();
+  const { id, title: urlTitle } = useParams(); // Lấy title từ URL
   const navigate = useNavigate();
   const location = useLocation();
 
   const mediaType = location.pathname.includes('movies') ? 'movie' : 'tv';
-  const { data, loading, error } = useFetchDetails(mediaType, id, title);
+  const { data: fetchedData, loading, error } = useFetchDetails(mediaType, id, urlTitle);
+  const [data, setData] = useState(null);
   const [playVideo, setPlayVideo] = useState(false);
   const [playVideoId, setPlayVideoId] = useState('');
   const [episodes, setEpisodes] = useState([]);
   const [episodeError, setEpisodeError] = useState(null);
   const [isInWatchList, setIsInWatchList] = useState(false);
+  const [userRating, setUserRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+
+  useEffect(() => {
+    if (fetchedData) {
+      setData(fetchedData);
+    }
+  }, [fetchedData]);
 
   useEffect(() => {
     const checkWatchList = async () => {
@@ -28,11 +47,7 @@ const DetailsPage = () => {
       if (!token) return;
 
       try {
-        const response = await axios.get('http://localhost:5116/api/watchlist', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await api.get('/api/watchlist');
         const watchList = response.data;
         const exists = watchList.some(
           (item) => item.mediaId === parseInt(id) && item.mediaType === mediaType
@@ -51,14 +66,12 @@ const DetailsPage = () => {
       if (mediaType !== 'tv' || !id) return;
 
       try {
-        const seasonsResponse = await axios.get(
-          `http://localhost:5116/api/tvseries/${id}/seasons`
-        );
+        const seasonsResponse = await api.get(`/api/tvseries/${id}/seasons`);
         const seasons = seasonsResponse.data;
 
         if (seasons.length > 0) {
-          const episodesResponse = await axios.get(
-            `http://localhost:5116/api/tvseries/seasons/${seasons[0].id}/episodes`
+          const episodesResponse = await api.get(
+            `/api/tvseries/seasons/${seasons[0].id}/episodes`
           );
           setEpisodes(episodesResponse.data);
 
@@ -97,18 +110,10 @@ const DetailsPage = () => {
     }
 
     try {
-      const response = await axios.post(
-        'http://localhost:5116/api/watchlist/add',
-        {
-          MediaId: parseInt(id),
-          MediaType: mediaType,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await api.post('/api/watchlist/add', {
+        MediaId: parseInt(id),
+        MediaType: mediaType,
+      });
 
       if (response.status === 200) {
         setIsInWatchList(true);
@@ -134,6 +139,81 @@ const DetailsPage = () => {
     }
   };
 
+  const fetchMediaDetails = async () => {
+    if (!data?.title) {
+      console.error('Title is missing, cannot fetch media details');
+      return null;
+    }
+    try {
+      const slug = createSlug(data.title);
+      const response = await api.get(
+        `/api/${mediaType === 'movie' ? 'movies' : 'tvseries'}/${id}/${slug}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching updated media details:', error);
+      return null;
+    }
+  };
+
+  const handleRatingSubmit = async (rating) => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      Swal.fire({
+        title: '',
+        text: 'Please log in to rate this media.',
+        icon: 'error',
+        background: '#222222',
+        color: '#fff',
+        confirmButtonColor: '#ffcc00',
+      });
+      navigate('/auth');
+      return;
+    }
+
+    try {
+      const response = await api.post('/api/ratings', {
+        MediaId: parseInt(id),
+        MediaType: mediaType,
+        Rating: rating,
+      });
+
+      if (response.status === 200) {
+        Swal.fire({
+          title: '',
+          text: 'Thank you for your rating!',
+          icon: 'success',
+          background: '#222222',
+          color: '#fff',
+          confirmButtonColor: '#ffcc00',
+        });
+
+        if (response.data.averageRating && response.data.numberOfRatings) {
+          setData((prevData) => ({
+            ...prevData,
+            rating: response.data.averageRating,
+            numberOfRatings: response.data.numberOfRatings,
+          }));
+        }
+
+        const updatedData = await fetchMediaDetails();
+        if (updatedData) {
+          setData(updatedData);
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      Swal.fire({
+        title: '',
+        text: error.response?.data?.error || 'Failed to submit rating.',
+        icon: 'error',
+        background: '#222222',
+        color: '#fff',
+        confirmButtonColor: '#ffcc00',
+      });
+    }
+  };
+
   const handlePlayVideo = (data) => {
     setPlayVideoId(data);
     setPlayVideo(true);
@@ -141,11 +221,14 @@ const DetailsPage = () => {
 
   const handlePlayNow = () => {
     if (mediaType === 'movie') {
-      navigate(`/movies/${data.id}/watch`);
+      const slug = createSlug(data.title); // Tạo slug từ title
+      navigate(`/movies/${data.id}/${slug}/watch`); // Điều hướng đến route mới
     } else if (mediaType === 'tv') {
       const firstEpisode = episodes[0];
       if (firstEpisode) {
-        navigate(`/tv/${data.id}/${firstEpisode.id}/watch`);
+        const slug = createSlug(data.title); // Tạo slug từ title của series
+        const episodeNumber = firstEpisode.episode_number || 1; // Lấy episodeNumber từ database
+        navigate(`/tvseries/${data.id}/${slug}/episode/${episodeNumber}/watch`); // Điều hướng đến route mới
       } else {
         Swal.fire({
           title: '',
@@ -172,7 +255,7 @@ const DetailsPage = () => {
         </p>
         <button
           onClick={() => navigate('/')}
-          className="mt-4 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-6 00"
+          className="mt-4 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
         >
           Quay lại trang chủ
         </button>
@@ -281,8 +364,40 @@ const DetailsPage = () => {
                     })}
                   />
                 </div>
+                <p className="text-white">
+                  ({data.numberOfRatings || 0} votes)
+                </p>
               </>
             )}
+          </div>
+
+          <div className="my-3">
+            <p className="text-white mb-1">Rate this:</p>
+            <div className="flex items-center gap-1">
+              {[...Array(10)].map((_, index) => {
+                const ratingValue = index + 1;
+                return (
+                  <FaStar
+                    key={index}
+                    className="cursor-pointer"
+                    color={
+                      ratingValue <= (hoverRating || userRating)
+                        ? '#ffc107'
+                        : '#e4e5e9'
+                    }
+                    onMouseEnter={() => setHoverRating(ratingValue)}
+                    onMouseLeave={() => setHoverRating(0)}
+                    onClick={() => {
+                      setUserRating(ratingValue);
+                      handleRatingSubmit(ratingValue);
+                    }}
+                  />
+                );
+              })}
+              {userRating > 0 && (
+                <span className="text-white ml-2">({userRating}/10)</span>
+              )}
+            </div>
           </div>
 
           <Divider />
