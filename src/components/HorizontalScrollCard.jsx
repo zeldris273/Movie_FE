@@ -23,7 +23,8 @@ const HorizontalScrollCard = ({ data = [], heading, trending, media_type }) => {
                     {
                         data.map((data, index) => {
                             return (
-                                <Card key={data.id + "heading" + index} data={data} index={index + 1} trending={trending} media_type={media_type}/>
+                                <Card key={data.id + "heading" + index} data={data} index={index + 1} trending={trending} media_type={media_type}
+                                />
                             )
                         })
                     }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import api from '../api/api'; // Sử dụng instance api
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -37,7 +37,7 @@ const Watchlist = () => {
     }
 
     try {
-      const response = await axios.get("http://localhost:5116/api/watchlist", {
+      const response = await api.get("http://localhost:5116/api/watchlist", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -60,7 +60,7 @@ const Watchlist = () => {
     }
 
     try {
-      await axios.delete("http://localhost:5116/api/watchlist/remove", {
+      await api.delete("http://localhost:5116/api/watchlist/remove", {
         headers: {
           Authorization: `Bearer ${token}`,
         },

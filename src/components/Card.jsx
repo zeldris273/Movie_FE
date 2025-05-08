@@ -18,7 +18,7 @@ const Card = ({ data, trending, index, media_type }) => {
 
   return (
     <Link
-      to={`/${mediaType}/${data.id}/${titlePlaceholder}`} // Điều hướng đúng: /movies/:id/:title hoặc /tv/:id/:title
+      to={`/${mediaType}/${data.id}/${titlePlaceholder}`}
       className="w-full min-w-[230px] max-w-[230px] h-80 overflow-hidden block rounded relative hover:scale-105 transition-all"
     >
       {data?.posterUrl ? (

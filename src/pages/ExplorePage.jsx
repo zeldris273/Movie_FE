@@ -37,11 +37,11 @@ const ExplorePage = () => {
   return (
     <div className="py-16">
       <div className="container mx-auto">
-        <h3 className="capitalize text-lg lg:text-xl font-semibold my-3">
+        <h3 className="capitalize text-lg lg:text-xl font-semibold my-3 ml-4">
           Popular {mediaType === 'movie' ? 'Movies' : 'TV Series'}
         </h3>
 
-        <div className="grid grid-cols-[repeat(auto-fit,230px)] gap-6 justify-center lg:justify-start">
+        <div className="grid grid-cols-[repeat(auto-fit,230px)] gap-6 justify-center lg:justify-start ml-4">
           {data.map((exploreData, index) => (
             <Card
               data={exploreData}

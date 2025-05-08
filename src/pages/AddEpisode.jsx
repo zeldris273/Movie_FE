@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../api/api";
 import { jwtDecode } from "jwt-decode";
 import Swal from "sweetalert2";
 
@@ -8,7 +8,7 @@ export default function AddEpisode() {
     tvSeriesId: "",
     seasonId: "",
     episodeNumber: "",
-    videoFile: null,
+    hlsZipFile: null, // Thay videoFile thành hlsZipFile
   });
   const [tvSeriesList, setTvSeriesList] = useState([]);
   const [seasonsList, setSeasonsList] = useState([]);
@@ -65,7 +65,7 @@ export default function AddEpisode() {
 
   const fetchTvSeries = async () => {
     try {
-      const response = await axios.get("http://localhost:5116/api/tvseries");
+      const response = await api.get("http://localhost:5116/api/tvseries");
       setTvSeriesList(response.data);
     } catch (error) {
       console.error("Lỗi khi lấy danh sách TV series:", error);
@@ -82,7 +82,7 @@ export default function AddEpisode() {
 
   const fetchSeasons = async (tvSeriesId) => {
     try {
-      const response = await axios.get(`http://localhost:5116/api/tvseries/${tvSeriesId}/seasons`);
+      const response = await api.get(`http://localhost:5116/api/tvseries/${tvSeriesId}/seasons`);
       setSeasonsList(response.data);
       if (response.data.length === 0) {
         Swal.fire({
@@ -116,9 +116,9 @@ export default function AddEpisode() {
     }
   };
 
-  const handleVideoChange = (e) => {
+  const handleZipChange = (e) => {
     const file = e.target.files[0];
-    if (file) setFormData((prev) => ({ ...prev, videoFile: file }));
+    if (file) setFormData((prev) => ({ ...prev, hlsZipFile: file }));
   };
 
   const handleUpload = async () => {
@@ -134,11 +134,11 @@ export default function AddEpisode() {
       return;
     }
 
-    const { tvSeriesId, episodeNumber, videoFile } = formData;
-    if (!tvSeriesId || !episodeNumber || !videoFile) {
+    const { tvSeriesId, episodeNumber, hlsZipFile } = formData;
+    if (!tvSeriesId || !episodeNumber || !hlsZipFile) {
       Swal.fire({
         title: "Lỗi!",
-        text: "Vui lòng điền đầy đủ thông tin: TV Series, Episode Number, và Video File!",
+        text: "Vui lòng điền đầy đủ thông tin: TV Series, Episode Number, và HLS Zip File!",
         icon: "error",
         background: "#1f2937",
         color: "#fff",
@@ -147,7 +147,7 @@ export default function AddEpisode() {
       return;
     }
 
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("accessToken"); // Sửa "token" thành "accessToken" để khớp với checkAdminRole
     if (!token) {
       Swal.fire({
         title: "Lỗi!",
@@ -161,13 +161,13 @@ export default function AddEpisode() {
     }
 
     const uploadData = new FormData();
-    uploadData.append("TvSeriesId", formData.tvSeriesId); // Thêm TvSeriesId
-    uploadData.append("SeasonId", formData.seasonId || 0); // Gửi 0 nếu không chọn season
+    uploadData.append("TvSeriesId", formData.tvSeriesId);
+    uploadData.append("SeasonId", formData.seasonId || 0);
     uploadData.append("EpisodeNumber", formData.episodeNumber);
-    uploadData.append("VideoFile", formData.videoFile);
+    uploadData.append("HlsZipFile", formData.hlsZipFile);
 
     try {
-      const response = await axios.post(
+      const response = await api.post(
         "http://localhost:5116/api/tvseries/episodes/upload",
         uploadData,
         {
@@ -198,7 +198,7 @@ export default function AddEpisode() {
         tvSeriesId: "",
         seasonId: "",
         episodeNumber: "",
-        videoFile: null,
+        hlsZipFile: null,
       });
       setSeasonsList([]);
       setUploadProgress(0);
@@ -228,14 +228,12 @@ export default function AddEpisode() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      {/* Main Content */}
       <main className="max-w-2xl mx-auto py-8 px-4 my-5">
         <div className="bg-gray-800 rounded-lg shadow-lg p-6 space-y-6">
           <h2 className="text-xl font-semibold text-center text-white">
             Upload Episode
           </h2>
 
-          {/* Form Inputs */}
           <div className="space-y-4">
             <div>
               <label htmlFor="tvSeriesId" className="block text-sm font-medium text-gray-400 mb-1">
@@ -294,20 +292,19 @@ export default function AddEpisode() {
             </div>
 
             <div>
-              <label htmlFor="videoFile" className="block text-sm font-medium text-gray-400 mb-1">
-                Choose Video *
+              <label htmlFor="hlsZipFile" className="block text-sm font-medium text-gray-400 mb-1">
+                Choose HLS Zip File *
               </label>
               <input
-                id="videoFile"
+                id="hlsZipFile"
                 type="file"
-                accept="video/mp4,video/avi,video/mov,video/mp2t"
-                onChange={handleVideoChange}
+                accept=".zip"
+                onChange={handleZipChange}
                 className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition duration-200"
               />
             </div>
           </div>
 
-          {/* Upload Button */}
           <button
             onClick={handleUpload}
             className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-300 shadow-md"
@@ -315,7 +312,6 @@ export default function AddEpisode() {
             Upload Episode
           </button>
 
-          {/* Progress Bar */}
           {uploadProgress > 0 && (
             <div className="w-full bg-gray-700 rounded-full h-2.5">
               <div
@@ -326,11 +322,10 @@ export default function AddEpisode() {
             </div>
           )}
 
-          {/* Display Results */}
           {videoUrl && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold text-gray-200">Uploaded Video:</h3>
+                <h3 className="text-lg font-semibold text-gray-200">Uploaded HLS URL:</h3>
                 <a
                   href={videoUrl}
                   target="_blank"

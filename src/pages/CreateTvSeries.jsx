@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../api/api";
 import { jwtDecode } from "jwt-decode";
 import Swal from "sweetalert2";
 
@@ -123,7 +123,7 @@ export default function CreateTvSeries() {
     uploadData.append("BackdropImageFile", formData.backdropImageFile);
 
     try {
-      const response = await axios.post(
+      const response = await api.post(
         "http://localhost:5116/api/tvseries/create",
         uploadData,
         {
