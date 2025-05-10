@@ -96,6 +96,11 @@ The MoviePlayer frontend is a React-based application designed to provide users 
    - `moment@2.30.1`
    - `react-circular-progressbar@2.2.0`
    - `jwt-decode@4.0.0`
+  
+3. **To run**:
+    ```bash
+   npm run dev
+   ```
 
 ## Usage
 
