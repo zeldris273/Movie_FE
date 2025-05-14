@@ -7,12 +7,13 @@ export default function CreateMovie() {
   const [formData, setFormData] = useState({
     title: "",
     overview: "",
-    genres: "", // Đổi từ mảng sang chuỗi
+    genres: "", // Chuỗi, phân tách bằng dấu phẩy
     status: "",
     releaseDate: "",
     type: "single_movie",
     studio: "",
     director: "",
+    actors: "", // Thêm trường actors
     videoFile: null,
     backdropFile: null,
     posterFile: null,
@@ -28,6 +29,7 @@ export default function CreateMovie() {
 
   const checkAdminRole = () => {
     const token = localStorage.getItem("accessToken");
+    console.log("Token:", token);
     if (!token) {
       Swal.fire({
         title: "Lỗi!",
@@ -82,22 +84,18 @@ export default function CreateMovie() {
 
   const handleBackdropChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setFormData((prev) => ({ ...prev, backdropFile: file }));
-    }
+    if (file) setFormData((prev) => ({ ...prev, backdropFile: file }));
   };
 
   const handlePosterChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setFormData((prev) => ({ ...prev, posterFile: file }));
-    }
+    if (file) setFormData((prev) => ({ ...prev, posterFile: file }));
   };
 
   const handleUpload = async () => {
     console.log("FormData before upload:", formData);
 
-    const { title, status, type, videoFile, backdropFile, posterFile } =
+    const { title, status, type, videoFile, backdropFile, posterFile, actors } =
       formData;
     if (!title || !status || !type || !videoFile) {
       Swal.fire({
@@ -123,7 +121,7 @@ export default function CreateMovie() {
       return;
     }
 
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("accessToken");
     if (!token) {
       Swal.fire({
         title: "Lỗi!",
@@ -148,6 +146,7 @@ export default function CreateMovie() {
     uploadData.append("Type", formData.type);
     uploadData.append("Studio", formData.studio || "");
     uploadData.append("Director", formData.director || "");
+    uploadData.append("Actors", formData.actors || ""); // Thêm actors
     uploadData.append("VideoFile", formData.videoFile);
     uploadData.append("BackdropFile", formData.backdropFile);
     uploadData.append("PosterFile", formData.posterFile);
@@ -197,6 +196,7 @@ export default function CreateMovie() {
         type: "single_movie",
         studio: "",
         director: "",
+        actors: "", // Reset actors
         videoFile: null,
         backdropFile: null,
         posterFile: null,
@@ -286,6 +286,24 @@ export default function CreateMovie() {
                 onChange={handleInputChange}
                 className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
                 placeholder="e.g., Action, Drama"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="actors"
+                className="block text-sm font-medium text-gray-400 mb-1"
+              >
+                Actors (comma-separated)
+              </label>
+              <input
+                id="actors"
+                name="actors"
+                type="text"
+                value={formData.actors}
+                onChange={handleInputChange}
+                className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+                placeholder="e.g., Tom Hanks, Leonardo DiCaprio"
               />
             </div>
 

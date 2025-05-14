@@ -14,6 +14,7 @@ export default function CreateTvSeries() {
     director: "",
     posterImageFile: null,
     backdropImageFile: null,
+    actors: "", // Thêm trường actors
   });
   const [posterImageUrl, setPosterImageUrl] = useState("");
   const [backdropImageUrl, setBackdropImageUrl] = useState("");
@@ -98,7 +99,7 @@ export default function CreateTvSeries() {
       return;
     }
 
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("accessToken"); // Sửa "token" thành "accessToken" để đồng bộ với checkAdminRole
     if (!token) {
       Swal.fire({
         title: "Lỗi!",
@@ -121,6 +122,7 @@ export default function CreateTvSeries() {
     uploadData.append("Director", formData.director || "");
     uploadData.append("PosterImageFile", formData.posterImageFile);
     uploadData.append("BackdropImageFile", formData.backdropImageFile);
+    uploadData.append("Actors", formData.actors || ""); // Thêm Actors vào FormData
 
     try {
       const response = await api.post(
@@ -140,7 +142,7 @@ export default function CreateTvSeries() {
         }
       );
 
-      setPosterImageUrl(response.data.imageUrl);
+      setPosterImageUrl(response.data.posterUrl); // Cập nhật tên trường theo response từ backend
       setBackdropImageUrl(response.data.backdropUrl);
       Swal.fire({
         title: "Thành công!",
@@ -161,6 +163,7 @@ export default function CreateTvSeries() {
         director: "",
         posterImageFile: null,
         backdropImageFile: null,
+        actors: "", // Reset trường actors
       });
       setUploadProgress(0);
     } catch (error) {
@@ -189,7 +192,6 @@ export default function CreateTvSeries() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-
       {/* Main Content */}
       <main className="max-w-2xl mx-auto py-8 px-4 my-10">
         <div className="bg-gray-800 rounded-lg shadow-lg p-6 space-y-6">
@@ -299,6 +301,21 @@ export default function CreateTvSeries() {
                 value={formData.director}
                 onChange={handleInputChange}
                 className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="actors" className="block text-sm font-medium text-gray-400 mb-1">
+                Actors (comma-separated)
+              </label>
+              <input
+                id="actors"
+                name="actors"
+                type="text"
+                value={formData.actors}
+                onChange={handleInputChange}
+                className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+                placeholder="e.g., Actor 1, Actor 2, Actor 3"
               />
             </div>
 

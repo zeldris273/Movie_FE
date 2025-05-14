@@ -1,116 +1,123 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import useFetchDetails from '../hooks/useFetchDetails';
-import moment from 'moment';
-import Divider from '../components/Divider';
-import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
-import 'react-circular-progressbar/dist/styles.css';
-import VideoPlay from '../components/VideoPlay';
-import api from '../api/api'; // Sử dụng instance api
-import Swal from 'sweetalert2';
-import { FaStar } from 'react-icons/fa';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import useFetchDetails from "../hooks/useFetchDetails";
+import moment from "moment";
+import Divider from "../components/Divider";
+import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
+import "react-circular-progressbar/dist/styles.css";
+import VideoPlay from "../components/VideoPlay";
+import api from "../api/api";
+import Swal from "sweetalert2";
+import { FaStar } from "react-icons/fa";
+import { FaUser } from "react-icons/fa";
 
-// Hàm chuyển đổi tiêu đề thành slug (tương tự logic backend)
+// Hàm chuyển đổi tiêu đề thành slug
 const createSlug = (title) => {
-  if (!title) return '';
-  let slug = title.toLowerCase().replace(/\s+/g, '-');
-  slug = slug.replace(/[^a-z0-9-]/g, '');
-  slug = slug.replace(/-+/g, '-');
+  if (!title) return "";
+  let slug = title.toLowerCase().replace(/\s+/g, "-");
+  slug = slug.replace(/[^a-z0-9-]/g, "");
+  slug = slug.replace(/-+/g, "-");
   return slug;
 };
 
 const DetailsPage = () => {
-  const { id, title: urlTitle } = useParams(); // Lấy title từ URL
+  const { id, title: urlTitle } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const mediaType = location.pathname.includes('movies') ? 'movie' : 'tv';
-  const { data: fetchedData, loading, error } = useFetchDetails(mediaType, id, urlTitle);
+  const mediaType = location.pathname.includes("movies") ? "movie" : "tv";
+  const {
+    data: fetchedData,
+    loading,
+    error,
+  } = useFetchDetails(mediaType, id, urlTitle);
   const [data, setData] = useState(null);
   const [playVideo, setPlayVideo] = useState(false);
-  const [playVideoId, setPlayVideoId] = useState('');
-  const [episodes, setEpisodes] = useState([]);
-  const [episodeError, setEpisodeError] = useState(null);
+  const [playVideoId, setPlayVideoId] = useState("");
+  // const [episodes, setEpisodes] = useState([]);
+  // const [episodeError, setEpisodeError] = useState(null);
   const [isInWatchList, setIsInWatchList] = useState(false);
   const [userRating, setUserRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
 
   useEffect(() => {
     if (fetchedData) {
+      console.log("Fetched data:", fetchedData);
       setData(fetchedData);
     }
   }, [fetchedData]);
 
   useEffect(() => {
     const checkWatchList = async () => {
-      const token = localStorage.getItem('accessToken');
+      const token = localStorage.getItem("accessToken");
       if (!token) return;
 
       try {
-        const response = await api.get('/api/watchlist');
+        const response = await api.get("/api/watchlist");
         const watchList = response.data;
         const exists = watchList.some(
-          (item) => item.mediaId === parseInt(id) && item.mediaType === mediaType
+          (item) =>
+            item.mediaId === parseInt(id) && item.mediaType === mediaType
         );
         setIsInWatchList(exists);
       } catch (err) {
-        console.error('Error checking watchlist:', err);
+        console.error("Error checking watchlist:", err);
       }
     };
 
     checkWatchList();
   }, [id, mediaType]);
 
-  useEffect(() => {
-    const fetchEpisodes = async () => {
-      if (mediaType !== 'tv' || !id) return;
+  // useEffect(() => {
+  //   const fetchEpisodes = async () => {
+  //     if (mediaType !== 'tv' || !id) return;
 
-      try {
-        const seasonsResponse = await api.get(`/api/tvseries/${id}/seasons`);
-        const seasons = seasonsResponse.data;
+  //     try {
+  //       const seasonsResponse = await api.get(`/api/tvseries/${id}/seasons`);
+  //       const seasons = seasonsResponse.data;
 
-        if (seasons.length > 0) {
-          const episodesResponse = await api.get(
-            `/api/tvseries/seasons/${seasons[0].id}/episodes`
-          );
-          setEpisodes(episodesResponse.data);
+  //       if (seasons.length > 0) {
+  //         const episodesResponse = await api.get(
+  //           `/api/tvseries/seasons/${seasons[0].id}/episodes`
+  //         );
+  //         setEpisodes(episodesResponse.data);
 
-          if (episodesResponse.data.length === 0) {
-            setEpisodeError('No episodes found for this season.');
-          }
-        } else {
-          setEpisodeError('No seasons found for this series.');
-        }
-      } catch (err) {
-        console.error('Error fetching episodes:', err);
-        setEpisodeError(
-          err.response?.status === 404
-            ? 'Season not found or no episodes available.'
-            : 'Failed to fetch episodes.'
-        );
-      }
-    };
+  //         if (episodesResponse.data.length === 0) {
+  //           setEpisodeError('No episodes found for this season.');
+  //         }
+  //       } else {
+  //         setEpisodeError('No seasons found for this series.');
+  //       }
+  //     } catch (err) {
+  //       console.error('Error fetching episodes:', err);
+  //       setEpisodeError(
+  //         err.response?.status === 404
+  //           ? 'Season not found or no episodes available.'
+  //           : 'Failed to fetch episodes.'
+  //       );
+  //     }
+  //   };
 
-    fetchEpisodes();
-  }, [mediaType, id]);
+  //   fetchEpisodes();
+  // }, [mediaType, id]);
 
   const handleAddToWatchList = async () => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken");
     if (!token) {
       Swal.fire({
-        title: '',
-        text: 'Please log in to add to watch list.',
-        icon: 'error',
-        background: '#222222',
-        color: '#fff',
-        confirmButtonColor: '#ffcc00',
+        title: "",
+        text: "Please log in to add to watch list.",
+        icon: "error",
+        background: "#222222",
+        color: "#fff",
+        confirmButtonColor: "#ffcc00",
       });
-      navigate('/auth');
+      navigate("/auth");
       return;
     }
 
     try {
-      const response = await api.post('/api/watchlist/add', {
+      const response = await api.post("/api/watchlist/add", {
         MediaId: parseInt(id),
         MediaType: mediaType,
       });
@@ -118,61 +125,61 @@ const DetailsPage = () => {
       if (response.status === 200) {
         setIsInWatchList(true);
         Swal.fire({
-          title: '',
-          text: 'Added to Watch List',
-          icon: 'success',
-          background: '#222222',
-          color: '#fff',
-          confirmButtonColor: '#ffcc00',
+          title: "",
+          text: "Added to Watch List",
+          icon: "success",
+          background: "#222222",
+          color: "#fff",
+          confirmButtonColor: "#ffcc00",
         });
       }
     } catch (error) {
-      console.error('Error adding to watch list:', error);
+      console.error("Error adding to watch list:", error);
       Swal.fire({
-        title: '',
-        text: error.response?.data?.error || 'Failed to add to watch list.',
-        icon: 'error',
-        background: '#222222',
-        color: '#fff',
-        confirmButtonColor: '#ffcc00',
+        title: "",
+        text: error.response?.data?.error || "Failed to add to watch list.",
+        icon: "error",
+        background: "#222222",
+        color: "#fff",
+        confirmButtonColor: "#ffcc00",
       });
     }
   };
 
   const fetchMediaDetails = async () => {
     if (!data?.title) {
-      console.error('Title is missing, cannot fetch media details');
+      console.error("Title is missing, cannot fetch media details");
       return null;
     }
     try {
       const slug = createSlug(data.title);
       const response = await api.get(
-        `/api/${mediaType === 'movie' ? 'movies' : 'tvseries'}/${id}/${slug}`
+        `/api/${mediaType === "movie" ? "movies" : "tvseries"}/${id}/${slug}`
       );
       return response.data;
     } catch (error) {
-      console.error('Error fetching updated media details:', error);
+      console.error("Error fetching updated media details:", error);
       return null;
     }
   };
 
   const handleRatingSubmit = async (rating) => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken");
     if (!token) {
       Swal.fire({
-        title: '',
-        text: 'Please log in to rate this media.',
-        icon: 'error',
-        background: '#222222',
-        color: '#fff',
-        confirmButtonColor: '#ffcc00',
+        title: "",
+        text: "Please log in to rate this media.",
+        icon: "error",
+        background: "#222222",
+        color: "#fff",
+        confirmButtonColor: "#ffcc00",
       });
-      navigate('/auth');
+      navigate("/auth");
       return;
     }
 
     try {
-      const response = await api.post('/api/ratings', {
+      const response = await api.post("/api/ratings", {
         MediaId: parseInt(id),
         MediaType: mediaType,
         Rating: rating,
@@ -180,12 +187,12 @@ const DetailsPage = () => {
 
       if (response.status === 200) {
         Swal.fire({
-          title: '',
-          text: 'Thank you for your rating!',
-          icon: 'success',
-          background: '#222222',
-          color: '#fff',
-          confirmButtonColor: '#ffcc00',
+          title: "",
+          text: "Thank you for your rating!",
+          icon: "success",
+          background: "#222222",
+          color: "#fff",
+          confirmButtonColor: "#ffcc00",
         });
 
         if (response.data.averageRating && response.data.numberOfRatings) {
@@ -202,14 +209,14 @@ const DetailsPage = () => {
         }
       }
     } catch (error) {
-      console.error('Error submitting rating:', error);
+      console.error("Error submitting rating:", error);
       Swal.fire({
-        title: '',
-        text: error.response?.data?.error || 'Failed to submit rating.',
-        icon: 'error',
-        background: '#222222',
-        color: '#fff',
-        confirmButtonColor: '#ffcc00',
+        title: "",
+        text: error.response?.data?.error || "Failed to submit rating.",
+        icon: "error",
+        background: "#222222",
+        color: "#fff",
+        confirmButtonColor: "#ffcc00",
       });
     }
   };
@@ -220,23 +227,23 @@ const DetailsPage = () => {
   };
 
   const handlePlayNow = () => {
-    if (mediaType === 'movie') {
-      const slug = createSlug(data.title); // Tạo slug từ title
-      navigate(`/movies/${data.id}/${slug}/watch`); // Điều hướng đến route mới
-    } else if (mediaType === 'tv') {
+    if (mediaType === "movie") {
+      const slug = createSlug(data.title);
+      navigate(`/movies/${data.id}/${slug}/watch`);
+    } else if (mediaType === "tv") {
       const firstEpisode = episodes[0];
       if (firstEpisode) {
-        const slug = createSlug(data.title); // Tạo slug từ title của series
-        const episodeNumber = firstEpisode.episode_number || 1; // Lấy episodeNumber từ database
-        navigate(`/tvseries/${data.id}/${slug}/episode/${episodeNumber}/watch`); // Điều hướng đến route mới
+        const slug = createSlug(data.title);
+        const episodeNumber = firstEpisode.episode_number || 1;
+        navigate(`/tvseries/${data.id}/${slug}/episode/${episodeNumber}/watch`);
       } else {
         Swal.fire({
-          title: '',
-          text: episodeError || 'No episodes available to play.',
-          icon: 'error',
-          background: '#222222',
-          color: '#fff',
-          confirmButtonColor: '#ffcc00',
+          title: "",
+          text: episodeError || "No episodes available to play.",
+          icon: "error",
+          background: "#222222",
+          color: "#fff",
+          confirmButtonColor: "#ffcc00",
         });
       }
     }
@@ -251,10 +258,11 @@ const DetailsPage = () => {
       <div className="text-white text-center py-20">
         <h2 className="text-2xl font-bold">Không tồn tại</h2>
         <p className="mt-2">
-          {mediaType === 'movie' ? 'Bộ phim' : 'TV series'} này không tồn tại hoặc URL không chính xác.
+          {mediaType === "movie" ? "Bộ phim" : "TV series"} này không tồn tại
+          hoặc URL không chính xác.
         </p>
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate("/")}
           className="mt-4 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
         >
           Quay lại trang chủ
@@ -268,10 +276,10 @@ const DetailsPage = () => {
       <div className="text-white text-center py-20">
         <h2 className="text-2xl font-bold">Không tồn tại</h2>
         <p className="mt-2">
-          {mediaType === 'movie' ? 'Bộ phim' : 'TV series'} này không tồn tại.
+          {mediaType === "movie" ? "Bộ phim" : "TV series"} này không tồn tại.
         </p>
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate("/")}
           className="mt-4 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-500"
         >
           Quay lại trang chủ
@@ -327,12 +335,14 @@ const DetailsPage = () => {
           <button
             onClick={handleAddToWatchList}
             className={`flex flex-col items-center justify-center gap-1 w-full cursor-pointer px-3 py-2 border border-black rounded-lg text-white transition mt-5 ${
-              isInWatchList ? 'bg-green-600' : 'bg-black/30 hover:bg-transparent'
+              isInWatchList
+                ? "bg-green-600"
+                : "bg-black/30 hover:bg-transparent"
             }`}
             disabled={isInWatchList}
           >
             <span className="text-sm font-medium">
-              {isInWatchList ? 'Added to Watch List' : '+ Add to Watch List'}
+              {isInWatchList ? "Added to Watch List" : "+ Add to Watch List"}
             </span>
           </button>
         </div>
@@ -352,15 +362,15 @@ const DetailsPage = () => {
                     value={data.rating * 10}
                     text={`${(data.rating * 10).toFixed(0)}%`}
                     styles={buildStyles({
-                      textColor: '#fff',
-                      textSize: '25px',
+                      textColor: "#fff",
+                      textSize: "25px",
                       pathColor:
                         data.rating >= 7
-                          ? 'green'
+                          ? "green"
                           : data.rating >= 5
-                          ? 'orange'
-                          : 'red',
-                      trailColor: '#ddd',
+                          ? "orange"
+                          : "red",
+                      trailColor: "#ddd",
                     })}
                   />
                 </div>
@@ -382,8 +392,8 @@ const DetailsPage = () => {
                     className="cursor-pointer"
                     color={
                       ratingValue <= (hoverRating || userRating)
-                        ? '#ffc107'
-                        : '#e4e5e9'
+                        ? "#ffc107"
+                        : "#e4e5e9"
                     }
                     onMouseEnter={() => setHoverRating(ratingValue)}
                     onMouseLeave={() => setHoverRating(0)}
@@ -404,18 +414,18 @@ const DetailsPage = () => {
 
           <div>
             <h3 className="text-xl font-bold text-white mb-1">Overview</h3>
-            <p>{data?.overview || 'No overview available.'}</p>
+            <p>{data?.overview || "No overview available."}</p>
 
             <Divider />
 
             <div className="flex gap-2">
-              {data?.genres && typeof data.genres === 'string' ? (
+              {data?.genres && typeof data.genres === "string" ? (
                 data.genres
-                  .replace(/\s*,\s*/g, ',')
-                  .split(',')
+                  .replace(/\s*,\s*/g, ",")
+                  .split(",")
                   .map((genre, index) => (
                     <span
-                      key={'Genre' + index}
+                      key={"Genre" + index}
                       className="bg-gray-700/60 text-white text-xs font-bold px-2 py-1 rounded-md"
                     >
                       {genre.trim()}
@@ -431,14 +441,14 @@ const DetailsPage = () => {
               <p>Status: {data?.status}</p>
               <span>|</span>
               <p>
-                Release Date:{' '}
+                Release Date:{" "}
                 {data?.releaseDate
-                  ? moment(data.releaseDate).format('YYYY')
-                  : 'N/A'}
+                  ? moment(data.releaseDate).format("YYYY")
+                  : "N/A"}
               </p>
             </div>
             <Divider />
-            {mediaType === 'tv' && (
+            {mediaType === "tv" && (
               <>
                 <p>Episode Number: {data?.numberOfEpisodes}</p>
                 <Divider />
@@ -448,15 +458,39 @@ const DetailsPage = () => {
             <div>
               <p>
                 <span className="text-white">Director: </span>
-                {data?.director || 'N/A'}
+                {data?.director || "N/A"}
               </p>
               <Divider />
               <p>
                 <span className="text-white">Studio: </span>
-                {data?.studio || 'N/A'}
+                {data?.studio || "N/A"}
               </p>
             </div>
           </div>
+
+          {data?.actors?.length > 0 ? (
+            <>
+              <Divider />
+              <h3 className="text-white font-semibold text-md mt-4 mb-2">
+                Cast
+              </h3>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-5">
+                {data.actors.map((actor, index) => (
+                  <div key={index} className="text-center">
+                    <div className="w-24 h-24 mx-auto flex justify-center items-center bg-gray-700 rounded-full">
+                      <FaUser className="w-12 h-12 text-white" />
+                    </div>
+                    <p className="font-bold text-center text-sm text-neutral-400 mt-2">
+                      {actor.name || "Unknown Actor"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="mt-5"></div>
+          )}
         </div>
       </div>
 
