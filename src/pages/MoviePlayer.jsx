@@ -8,6 +8,7 @@ import { RiVolumeMuteFill } from "react-icons/ri";
 import { FaVolumeUp } from "react-icons/fa";
 import { MdFullscreen, MdFullscreenExit } from "react-icons/md";
 import Hls from "hls.js";
+import { MdSignalCellularAlt, MdSchedule, MdClose } from "react-icons/md";
 
 const MoviePlayer = () => {
   const { id, title, episodeNumber } = useParams();
@@ -33,7 +34,9 @@ const MoviePlayer = () => {
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [isMuted, setIsMuted] = useState(false);
   const [settingsTab, setSettingsTab] = useState("quality");
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const videoRef = useRef(null);
+  const containerRef = useRef(null); // Ref for the custom container
   const controlsTimeoutRef = useRef(null);
   const settingsMenuTimeoutRef = useRef(null);
 
@@ -207,6 +210,17 @@ const MoviePlayer = () => {
   }, [videoUrl, playbackRate, isMuted]);
 
   useEffect(() => {
+    const handleFullScreenChange = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullScreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullScreenChange);
+    };
+  }, []);
+
+  useEffect(() => {
     if (showSettingsMenu) {
       settingsMenuTimeoutRef.current = setTimeout(() => {
         setShowSettingsMenu(false);
@@ -257,7 +271,8 @@ const MoviePlayer = () => {
 
   const handleEpisodeChange = (episode) => {
     const slug = title;
-    const newEpisodeNumber = episode.episode_number || episode.episodeNumber || 1;
+    const newEpisodeNumber =
+      episode.episode_number || episode.episodeNumber || 1;
     navigate(`/tvseries/${id}/${slug}/episode/${newEpisodeNumber}/watch`, {
       state: { videoUrl: episode.videoUrl },
     });
@@ -281,23 +296,41 @@ const MoviePlayer = () => {
       clearTimeout(controlsTimeoutRef.current);
     }
     controlsTimeoutRef.current = setTimeout(() => {
-      if (isPlaying) {
+      if (isPlaying && !showSettingsMenu) {
         setShowControls(false);
       }
     }, 3000);
   };
 
   const toggleFullScreen = () => {
-    const video = videoRef.current;
-    if (!video) return;
+    if (!containerRef.current) return;
 
     if (!document.fullscreenElement) {
-      video.requestFullscreen().catch((err) => {
-        console.error("Error attempting to enable full-screen mode:", err);
-        setError("Full-screen mode is not supported or blocked.");
-      });
+      containerRef.current
+        .requestFullscreen()
+        .catch((err) => {
+          console.error("Error attempting to enable full-screen mode:", err);
+          setError("Full-screen mode is not supported or blocked.");
+        })
+        .then(() => {
+          setIsFullScreen(true);
+          // Ensure video fills the fullscreen container
+          const video = videoRef.current;
+          if (video) {
+            video.style.width = "100%";
+            video.style.height = "100%";
+          }
+        });
     } else {
-      document.exitFullscreen();
+      document.exitFullscreen().then(() => {
+        setIsFullScreen(false);
+        // Reset video size after exiting fullscreen
+        const video = videoRef.current;
+        if (video) {
+          video.style.width = "";
+          video.style.height = "";
+        }
+      });
     }
   };
 
@@ -601,7 +634,9 @@ const MoviePlayer = () => {
         )}
 
         {comment.replies && comment.replies.length > 0 && (
-          <div className="mt-2">{renderComments(comment.replies, level + 1)}</div>
+          <div className="mt-2">
+            {renderComments(comment.replies, level + 1)}
+          </div>
         )}
       </div>
     ));
@@ -627,24 +662,41 @@ const MoviePlayer = () => {
 
   return (
     <div className="bg-neutral-900 min-h-screen text-white">
-      <div className="container mx-auto p-4 my-10">
+      <div
+        ref={containerRef}
+        className={`container mx-auto p-4 my-10 ${
+          isFullScreen ? "fixed top-0 left-0 w-screen h-screen" : ""
+        }`}
+        style={{ paddingTop: isFullScreen ? "0" : "40%" }}
+        onMouseMove={handleMouseMove}
+      >
         <div
-          className="relative w-full"
-          style={{ paddingTop: "40%" }}
-          onMouseMove={handleMouseMove}
+          className="relative w-full h-full"
+          style={{
+            height: isFullScreen ? "100%" : "600px",
+            position: "absolute",
+            top: 0,
+            left: 0,
+          }}
         >
           <video
             ref={videoRef}
             className="absolute top-0 left-0 w-full h-full rounded-lg shadow-lg"
-            onError={(e) => console.error("Video playback error:", e)}
             onClick={handlePlayPause}
+            controls={false} // Disable default controls
+            disablePictureInPicture // Prevent default PIP
+            onContextMenu={(e) => e.preventDefault()} // Disable right-click context menu
           />
 
           {/* Custom Controls */}
           {showControls && (
-            <div className="absolute bottom-0 left-0 right-0">
-              {/* Seek Bar and Time Display on Top of Buttons */}
-              <div className="bg-transparent p-2 flex items-center space-x-2">
+            <div
+              className={`absolute bottom-0 left-0 right-0 ${
+                isFullScreen ? "p-4" : "p-2"
+              }`}
+            >
+              {/* Seek Bar and Time Display */}
+              <div className="bg-transparent flex items-center space-x-2">
                 <div className="text-white text-sm">
                   {formatTime(currentTime)} / {formatTime(duration)}
                 </div>
@@ -665,10 +717,13 @@ const MoviePlayer = () => {
                 />
               </div>
 
-              {/* Buttons on Bottom */}
-              <div className="bg-transparent p-2 flex items-center justify-between fixed-controls">
+              {/* Buttons */}
+              <div className="bg-transparent flex items-center justify-between mt-2">
                 <div className="flex items-center space-x-4">
-                  <button onClick={handlePlayPause} className="text-white text-xl">
+                  <button
+                    onClick={handlePlayPause}
+                    className="text-white text-xl"
+                  >
                     {isPlaying ? (
                       <svg
                         className="w-6 h-6"
@@ -714,64 +769,86 @@ const MoviePlayer = () => {
                       <IoMdSettings />
                     </button>
                     {showSettingsMenu && (
-                      <div className="absolute bottom-12 right-0 bg-gray-800 rounded-lg shadow-lg z-10 w-40">
-                        <div className="px-2 py-1 text-white text-sm">
-                          <button
-                            onClick={() => switchSettingsTab("quality")}
-                            className={`w-full text-left px-2 py-1 hover:bg-gray-700 ${
-                              settingsTab === "quality" ? "bg-gray-700" : ""
-                            }`}
-                          >
-                            Quality
-                          </button>
-                          <button
-                            onClick={() => switchSettingsTab("speed")}
-                            className={`w-full text-left px-2 py-1 hover:bg-gray-700 ${
-                              settingsTab === "speed" ? "bg-gray-700" : ""
-                            }`}
-                          >
-                            Speed
-                          </button>
-                        </div>
-                        <div className="border-t border-gray-700"></div>
-                        {settingsTab === "quality" && (
-                          <>
+                      <div className="absolute bottom-12 right-0 w-56 bg-[#1e1e1e] text-white rounded-md shadow-lg z-50 overflow-hidden">
+                        {/* Tabs + Close */}
+                        <div className="flex items-center justify-between px-3 py-2 bg-black">
+                          <div className="flex space-x-4">
                             <button
-                              onClick={() => handleQualityChange(-1)}
-                              className={`block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 ${
-                                selectedQuality === -1 ? "bg-gray-700" : ""
+                              onClick={() => switchSettingsTab("quality")}
+                              className={`flex items-center text-sm ${
+                                settingsTab === "quality"
+                                  ? "border-b-2 border-white"
+                                  : "text-gray-400"
                               }`}
                             >
-                              Auto
+                              <MdSignalCellularAlt className="text-lg mr-1" />
                             </button>
-                            {qualityLevels.map((level, index) => (
+                            <button
+                              onClick={() => switchSettingsTab("speed")}
+                              className={`flex items-center text-sm ${
+                                settingsTab === "speed"
+                                  ? "border-b-2 border-white"
+                                  : "text-gray-400"
+                              }`}
+                            >
+                              <MdSchedule className="text-lg" />
+                            </button>
+                          </div>
+                          <button
+                            onClick={() => setShowSettingsMenu(false)}
+                            className="text-gray-400 hover:text-white"
+                          >
+                            <MdClose className="text-xl" />
+                          </button>
+                        </div>
+
+                        {/* Options */}
+                        <div className="py-2 px-3 space-y-1 text-sm bg-[#2b2b2b]">
+                          {settingsTab === "quality" && (
+                            <>
                               <button
-                                key={index}
-                                onClick={() => handleQualityChange(index)}
-                                className={`block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 ${
-                                  selectedQuality === index ? "bg-gray-700" : ""
-                                }`}
+                                onClick={() => handleQualityChange(-1)}
+                                className={`block w-full text-left px-2 py-1 rounded ${
+                                  selectedQuality === -1
+                                    ? "text-white font-bold"
+                                    : "text-gray-300"
+                                } hover:bg-gray-700`}
                               >
-                                {level.height}p
+                                Auto
                               </button>
-                            ))}
-                          </>
-                        )}
-                        {settingsTab === "speed" && (
-                          <>
-                            {[0.5, 1.0, 1.5, 2.0].map((rate) => (
-                              <button
-                                key={rate}
-                                onClick={() => handlePlaybackRateChange(rate)}
-                                className={`block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 ${
-                                  playbackRate === rate ? "bg-gray-700" : ""
-                                }`}
-                              >
-                                {rate}x
-                              </button>
-                            ))}
-                          </>
-                        )}
+                              {qualityLevels.map((level, index) => (
+                                <button
+                                  key={index}
+                                  onClick={() => handleQualityChange(index)}
+                                  className={`block w-full text-left px-2 py-1 rounded ${
+                                    selectedQuality === index
+                                      ? "text-white font-bold"
+                                      : "text-gray-300"
+                                  } hover:bg-gray-700`}
+                                >
+                                  {level.height}p
+                                </button>
+                              ))}
+                            </>
+                          )}
+                          {settingsTab === "speed" && (
+                            <>
+                              {[0.5, 1.0, 1.5, 2.0].map((rate) => (
+                                <button
+                                  key={rate}
+                                  onClick={() => handlePlaybackRateChange(rate)}
+                                  className={`block w-full text-left px-2 py-1 rounded ${
+                                    playbackRate === rate
+                                      ? "text-white font-bold"
+                                      : "text-gray-300"
+                                  } hover:bg-gray-700`}
+                                >
+                                  {rate}x
+                                </button>
+                              ))}
+                            </>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -779,11 +856,7 @@ const MoviePlayer = () => {
                     onClick={toggleFullScreen}
                     className="text-white hover:text-gray-300 text-2xl"
                   >
-                    {document.fullscreenElement ? (
-                      <MdFullscreenExit />
-                    ) : (
-                      <MdFullscreen />
-                    )}
+                    {isFullScreen ? <MdFullscreenExit /> : <MdFullscreen />}
                   </button>
                 </div>
               </div>
