@@ -2,7 +2,7 @@
 
 ## Creator
 
-Nguyen Van Hieu - 2280600964\
+Nguyen Van Hieu - 2280600964
 Nguyen Duc Trung - 2280603448
 
 ## Overview
