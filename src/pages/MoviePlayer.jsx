@@ -9,6 +9,7 @@ import { FaVolumeUp } from "react-icons/fa";
 import { MdFullscreen, MdFullscreenExit } from "react-icons/md";
 import Hls from "hls.js";
 import { MdSignalCellularAlt, MdSchedule, MdClose } from "react-icons/md";
+import { jwtDecode } from "jwt-decode";
 
 const MoviePlayer = () => {
   const { id, title, episodeNumber } = useParams();
@@ -35,13 +36,36 @@ const MoviePlayer = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [settingsTab, setSettingsTab] = useState("quality");
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const videoRef = useRef(null);
-  const containerRef = useRef(null); // Ref for the custom container
+  const containerRef = useRef(null);
   const controlsTimeoutRef = useRef(null);
   const settingsMenuTimeoutRef = useRef(null);
 
   const mediaType = location.pathname.includes("movies") ? "movie" : "tv";
-  const currentUserId = 1;
+
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        const userId =
+          decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"];
+        setCurrentUserId(parseInt(userId, 10));
+      } catch (err) {
+        console.error("Error decoding token:", err);
+        setError("Invalid token. Please log in again.");
+        navigate("/auth");
+      }
+    } else {
+      setError("You are not logged in. Please log in to continue.");
+      navigate("/auth");
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location]);
 
   useEffect(() => {
     const fetchVideoUrl = async () => {
@@ -50,10 +74,12 @@ const MoviePlayer = () => {
           mediaType === "movie"
             ? `/api/movies/${id}/${title}/watch`
             : `/api/tvseries/${id}/${title}/episode/${episodeNumber}/watch`;
+        console.log("Fetching video URL from:", endpoint);
         const response = await api.get(endpoint);
+        console.log("Video URL received:", response.data.videoUrl);
         setVideoUrl(response.data.videoUrl);
       } catch (err) {
-        console.error("Error fetching video URL:", err);
+        console.error("Error fetching video URL:", err.response || err);
         if (err.response?.status === 401) {
           setError("Your session has expired. Please log in again.");
         } else {
@@ -127,23 +153,39 @@ const MoviePlayer = () => {
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !videoUrl) return;
+    if (!video || !videoUrl) {
+      console.log("Video or URL not ready:", { video, videoUrl });
+      return;
+    }
+
+    console.log("Video element dimensions:", {
+      width: video.offsetWidth,
+      height: video.offsetHeight,
+    });
 
     if (Hls.isSupported()) {
+      console.log("HLS supported, loading source:", videoUrl);
       const hls = new Hls();
       hls.loadSource(videoUrl);
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        console.log("Manifest parsed, quality levels:", hls.levels);
         setQualityLevels(hls.levels);
         setSelectedQuality(hls.currentLevel);
+        video.play().catch((err) => {
+          console.error("Auto-play failed:", err.message);
+          setError("Auto-play blocked. Please click play to start the video.");
+        });
       });
 
       hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+        console.log("Switched to quality level:", data.level);
         setSelectedQuality(data.level);
       });
 
       hls.on(Hls.Events.ERROR, (event, data) => {
+        console.error("HLS Error:", event, data);
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
@@ -170,7 +212,12 @@ const MoviePlayer = () => {
         }
       };
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      console.log("Using native HLS:", videoUrl);
       video.src = videoUrl;
+      video.play().catch((err) => {
+        console.error("Auto-play failed:", err.message);
+        setError("Auto-play blocked. Please click play to start the video.");
+      });
     } else {
       setError("HLS is not supported in this browser.");
     }
@@ -242,8 +289,8 @@ const MoviePlayer = () => {
       video.pause();
     } else {
       video.play().catch((err) => {
-        console.error("Play failed:", err);
-        setError("Please interact with the page to play the video.");
+        console.error("Play failed:", err.message);
+        setError("Failed to play video. Please try again.");
       });
     }
     setIsPlaying(!isPlaying);
@@ -314,7 +361,6 @@ const MoviePlayer = () => {
         })
         .then(() => {
           setIsFullScreen(true);
-          // Ensure video fills the fullscreen container
           const video = videoRef.current;
           if (video) {
             video.style.width = "100%";
@@ -324,7 +370,6 @@ const MoviePlayer = () => {
     } else {
       document.exitFullscreen().then(() => {
         setIsFullScreen(false);
-        // Reset video size after exiting fullscreen
         const video = videoRef.current;
         if (video) {
           video.style.width = "";
@@ -384,13 +429,6 @@ const MoviePlayer = () => {
     const episodeId = mediaType === "tv" ? getEpisodeId() : null;
 
     try {
-      console.log("Sending comment:", {
-        userId: currentUserId,
-        tvSeriesId: mediaType === "tv" ? parseInt(id) : null,
-        movieId: mediaType === "movie" ? parseInt(id) : null,
-        episodeId: episodeId,
-        commentText: newComment,
-      });
       const response = await api.post("/api/comments", {
         userId: currentUserId,
         tvSeriesId: mediaType === "tv" ? parseInt(id) : null,
@@ -523,14 +561,14 @@ const MoviePlayer = () => {
     return commentsList.map((comment) => (
       <div
         key={comment.id}
-        className={`p-4 bg-gray-800 rounded-lg flex flex-col space-y-1 ${
-          level > 0 ? "ml-8 border-l-2 border-gray-700" : ""
+        className={`p-2 sm:p-4 bg-gray-800 rounded-lg flex flex-col space-y-1 ${
+          level > 0 ? "ml-4 sm:ml-8 border-l-2 border-gray-700" : ""
         }`}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <span className="font-semibold">{comment.username}</span>
-            <span className="text-gray-400 text-sm">
+            <span className="font-semibold text-sm sm:text-base">{comment.username}</span>
+            <span className="text-gray-400 text-xs sm:text-sm">
               {new Date(comment.timestamp).toLocaleString()}
             </span>
           </div>
@@ -541,7 +579,7 @@ const MoviePlayer = () => {
                 className="text-gray-400 hover:text-gray-300"
               >
                 <svg
-                  className="w-5 h-5"
+                  className="w-4 sm:w-5 h-4 sm:h-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -556,16 +594,16 @@ const MoviePlayer = () => {
                 </svg>
               </button>
               {menuOpen === comment.id && (
-                <div className="absolute right-0 mt-2 w-32 bg-gray-700 rounded-lg shadow-lg z-10">
+                <div className="absolute right-0 mt-2 w-24 sm:w-32 bg-gray-700 rounded-lg shadow-lg z-10">
                   <button
                     onClick={() => handleEditComment(comment)}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 rounded-t-lg"
+                    className="block w-full text-left px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm text-gray-200 hover:bg-gray-600 rounded-t-lg"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleDeleteComment(comment.id)}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 rounded-b-lg"
+                    className="block w-full text-left px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm text-gray-200 hover:bg-gray-600 rounded-b-lg"
                   >
                     Delete
                   </button>
@@ -578,36 +616,36 @@ const MoviePlayer = () => {
         {editCommentId === comment.id ? (
           <form
             onSubmit={(e) => handleUpdateComment(e, comment.id)}
-            className="flex items-center space-x-2 mt-2"
+            className="flex items-center space-x-1 sm:space-x-2 mt-1 sm:mt-2"
           >
             <input
               type="text"
               value={editCommentText}
               onChange={(e) => setEditCommentText(e.target.value)}
-              className="flex-1 p-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-yellow-400"
+              className="flex-1 p-1 sm:p-2 rounded-lg bg-gray-700 text-white text-xs sm:text-sm border border-gray-600 focus:outline-none focus:border-yellow-400"
             />
             <button
               type="submit"
-              className="px-3 py-1 bg-yellow-500 rounded-lg hover:bg-yellow-400"
+              className="px-2 sm:px-3 py-1 bg-yellow-500 rounded-lg hover:bg-yellow-400 text-xs sm:text-sm"
             >
               Save
             </button>
             <button
               onClick={() => setEditCommentId(null)}
-              className="px-3 py-1 bg-gray-600 rounded-lg hover:bg-gray-500"
+              className="px-2 sm:px-3 py-1 bg-gray-600 rounded-lg hover:bg-gray-500 text-xs sm:text-sm"
             >
               Cancel
             </button>
           </form>
         ) : (
-          <p className="text-gray-300">{comment.commentText}</p>
+          <p className="text-gray-300 text-sm sm:text-base">{comment.commentText}</p>
         )}
 
         <button
           onClick={() =>
             setReplyCommentId(replyCommentId === comment.id ? null : comment.id)
           }
-          className="text-yellow-400 hover:text-yellow-300 text-sm mt-1 self-start"
+          className="text-yellow-400 hover:text-yellow-300 text-xs sm:text-sm mt-1 self-start"
         >
           {replyCommentId === comment.id ? "Cancel Reply" : "Reply"}
         </button>
@@ -615,18 +653,18 @@ const MoviePlayer = () => {
         {replyCommentId === comment.id && (
           <form
             onSubmit={(e) => handleReplyComment(e, comment.id)}
-            className="flex items-center space-x-2 mt-2"
+            className="flex items-center space-x-1 sm:space-x-2 mt-1 sm:mt-2"
           >
             <input
               type="text"
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
               placeholder="Add a reply..."
-              className="flex-1 p-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-yellow-400"
+              className="flex-1 p-1 sm:p-2 rounded-lg bg-gray-700 text-white text-xs sm:text-sm border border-gray-600 focus:outline-none focus:border-yellow-400"
             />
             <button
               type="submit"
-              className="px-3 py-1 bg-yellow-500 rounded-lg hover:bg-yellow-400"
+              className="px-2 sm:px-3 py-1 bg-yellow-500 rounded-lg hover:bg-yellow-400 text-xs sm:text-sm"
             >
               Post Reply
             </button>
@@ -634,7 +672,7 @@ const MoviePlayer = () => {
         )}
 
         {comment.replies && comment.replies.length > 0 && (
-          <div className="mt-2">
+          <div className="mt-1 sm:mt-2">
             {renderComments(comment.replies, level + 1)}
           </div>
         )}
@@ -644,60 +682,65 @@ const MoviePlayer = () => {
 
   if (error) {
     return (
-      <div className="text-white text-center">
-        {error}
+      <div className="mt-15 text-white text-center p-4">
+        <p>{error}</p>
         <button
-          onClick={() => setError(null)}
-          className="ml-2 px-2 py-1 bg-yellow-500 rounded"
+          onClick={() => {
+            setError(null);
+            setVideoUrl(null);
+          }}
+          className="ml-2 px-2 py-1 bg-yellow-500 rounded text-sm hover:bg-yellow-400"
         >
-          Try Again
+          Retry
+        </button>
+        <button
+          onClick={() => navigate("/")}
+          className="ml-2 px-2 py-1 bg-gray-600 rounded text-sm hover:bg-gray-500"
+        >
+          Back to Home
         </button>
       </div>
     );
   }
 
   if (!videoUrl) {
-    return <div className="text-white text-center">Loading video...</div>;
+    return <div className="text-white text-center p-4">Loading video...</div>;
+  }
+
+  if (!currentUserId) {
+    return <div className="text-white text-center p-4">Authenticating...</div>;
   }
 
   return (
     <div className="bg-neutral-900 min-h-screen text-white">
       <div
         ref={containerRef}
-        className={`container mx-auto p-4 my-10 ${
+        className={`container mx-auto p-2 sm:p-4 my-2 sm:my-10 ${
           isFullScreen ? "fixed top-0 left-0 w-screen h-screen" : ""
         }`}
-        style={{ paddingTop: isFullScreen ? "0" : "40%" }}
         onMouseMove={handleMouseMove}
       >
         <div
-          className="relative w-full h-full"
-          style={{
-            height: isFullScreen ? "100%" : "600px",
-            position: "absolute",
-            top: 0,
-            left: 0,
-          }}
+          className="relative w-full"
+          style={{ paddingTop: isFullScreen ? "0" : "56.25%" }}
         >
           <video
             ref={videoRef}
             className="absolute top-0 left-0 w-full h-full rounded-lg shadow-lg"
             onClick={handlePlayPause}
-            controls={false} // Disable default controls
-            disablePictureInPicture // Prevent default PIP
-            onContextMenu={(e) => e.preventDefault()} // Disable right-click context menu
+            controls={false}
+            disablePictureInPicture
+            onContextMenu={(e) => e.preventDefault()}
           />
 
-          {/* Custom Controls */}
           {showControls && (
             <div
               className={`absolute bottom-0 left-0 right-0 ${
-                isFullScreen ? "p-4" : "p-2"
-              }`}
+                isFullScreen ? "p-2 sm:p-4" : "p-1 sm:p-2"
+              } bg-transparent`}
             >
-              {/* Seek Bar and Time Display */}
-              <div className="bg-transparent flex items-center space-x-2">
-                <div className="text-white text-sm">
+              <div className="flex flex-col sm:flex-row items-center space-y-1 sm:space-y-0 sm:space-x-2">
+                <div className="text-white text-xs sm:text-sm">
                   {formatTime(currentTime)} / {formatTime(duration)}
                 </div>
                 <input
@@ -706,27 +749,26 @@ const MoviePlayer = () => {
                   max="100"
                   value={duration ? (currentTime / duration) * 100 : 0}
                   onChange={handleSeek}
-                  className="flex-1 h-1 bg-gray-600 rounded-full appearance-none cursor-pointer"
+                  className="flex-1 h-1 bg-transparent rounded-full appearance-none cursor-pointer"
                   style={{
                     background: `linear-gradient(to right, #facc15 ${
                       duration ? (currentTime / duration) * 100 : 0
-                    }%, #4b5563 ${
+                    }%, transparent ${
                       duration ? (currentTime / duration) * 100 : 0
                     }%)`,
                   }}
                 />
               </div>
 
-              {/* Buttons */}
-              <div className="bg-transparent flex items-center justify-between mt-2">
-                <div className="flex items-center space-x-4">
+              <div className="flex items-center justify-between mt-1 sm:mt-2">
+                <div className="flex items-center space-x-1 sm:space-x-2">
                   <button
                     onClick={handlePlayPause}
-                    className="text-white text-xl"
+                    className="text-white text-lg sm:text-xl hover:bg-transparent p-1 rounded-full"
                   >
                     {isPlaying ? (
                       <svg
-                        className="w-6 h-6"
+                        className="w-4 sm:w-6 h-4 sm:h-6"
                         fill="currentColor"
                         viewBox="0 0 24 24"
                       >
@@ -734,7 +776,7 @@ const MoviePlayer = () => {
                       </svg>
                     ) : (
                       <svg
-                        className="w-6 h-6"
+                        className="w-4 sm:w-6 h-4 sm:h-6"
                         fill="currentColor"
                         viewBox="0 0 24 24"
                       >
@@ -742,21 +784,24 @@ const MoviePlayer = () => {
                       </svg>
                     )}
                   </button>
-                  <button onClick={toggleMute} className="text-white text-xl">
+                  <button
+                    onClick={toggleMute}
+                    className="text-white text-lg sm:text-xl hover:bg-transparent p-1 rounded-full"
+                  >
                     {isMuted ? <RiVolumeMuteFill /> : <FaVolumeUp />}
                   </button>
                 </div>
-                <div className="flex items-center space-x-4">
-                  <div className="flex gap-2">
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <div className="flex gap-1 sm:gap-2">
                     <button
                       onClick={handleSkipBackward}
-                      className="text-white hover:text-gray-300 text-xl"
+                      className="text-white hover:bg-transparent p-1 rounded-full text-lg sm:text-xl"
                     >
                       <MdReplay5 />
                     </button>
                     <button
                       onClick={handleSkipForward}
-                      className="text-white hover:text-gray-300 text-xl"
+                      className="text-white hover:bg-transparent p-1 rounded-full text-lg sm:text-xl"
                     >
                       <MdOutlineForward5 />
                     </button>
@@ -764,51 +809,49 @@ const MoviePlayer = () => {
                   <div className="relative">
                     <button
                       onClick={toggleSettingsMenu}
-                      className="text-white hover:text-gray-300 text-xl mt-2"
+                      className="text-white hover:bg-transparent p-1 rounded-full text-lg sm:text-xl"
                     >
                       <IoMdSettings />
                     </button>
                     {showSettingsMenu && (
-                      <div className="absolute bottom-12 right-0 w-56 bg-[#1e1e1e] text-white rounded-md shadow-lg z-50 overflow-hidden">
-                        {/* Tabs + Close */}
-                        <div className="flex items-center justify-between px-3 py-2 bg-black">
-                          <div className="flex space-x-4">
+                      <div className="absolute bottom-8 sm:bottom-12 right-0 w-40 sm:w-56 bg-[#1e1e1e] text-white rounded-md shadow-lg z-50 overflow-hidden">
+                        <div className="flex items-center justify-between px-2 sm:px-3 py-1 sm:py-2 bg-black">
+                          <div className="flex space-x-2 sm:space-x-4">
                             <button
                               onClick={() => switchSettingsTab("quality")}
-                              className={`flex items-center text-sm ${
+                              className={`flex items-center text-xs sm:text-sm ${
                                 settingsTab === "quality"
                                   ? "border-b-2 border-white"
                                   : "text-gray-400"
                               }`}
                             >
-                              <MdSignalCellularAlt className="text-lg mr-1" />
+                              <MdSignalCellularAlt className="text-base sm:text-lg mr-1" />
                             </button>
                             <button
                               onClick={() => switchSettingsTab("speed")}
-                              className={`flex items-center text-sm ${
+                              className={`flex items-center text-xs sm:text-sm ${
                                 settingsTab === "speed"
                                   ? "border-b-2 border-white"
                                   : "text-gray-400"
                               }`}
                             >
-                              <MdSchedule className="text-lg" />
+                              <MdSchedule className="text-base sm:text-lg" />
                             </button>
                           </div>
                           <button
                             onClick={() => setShowSettingsMenu(false)}
                             className="text-gray-400 hover:text-white"
                           >
-                            <MdClose className="text-xl" />
+                            <MdClose className="text-base sm:text-xl" />
                           </button>
                         </div>
 
-                        {/* Options */}
-                        <div className="py-2 px-3 space-y-1 text-sm bg-[#2b2b2b]">
+                        <div className="py-1 sm:py-2 px-2 sm:px-3 space-y-0.5 sm:space-y-1 text-xs sm:text-sm bg-[#2b2b2b]">
                           {settingsTab === "quality" && (
                             <>
                               <button
                                 onClick={() => handleQualityChange(-1)}
-                                className={`block w-full text-left px-2 py-1 rounded ${
+                                className={`block w-full text-left px-1 sm:px-2 py-0.5 sm:py-1 rounded ${
                                   selectedQuality === -1
                                     ? "text-white font-bold"
                                     : "text-gray-300"
@@ -820,7 +863,7 @@ const MoviePlayer = () => {
                                 <button
                                   key={index}
                                   onClick={() => handleQualityChange(index)}
-                                  className={`block w-full text-left px-2 py-1 rounded ${
+                                  className={`block w-full text-left px-1 sm:px-2 py-0.5 sm:py-1 rounded ${
                                     selectedQuality === index
                                       ? "text-white font-bold"
                                       : "text-gray-300"
@@ -837,7 +880,7 @@ const MoviePlayer = () => {
                                 <button
                                   key={rate}
                                   onClick={() => handlePlaybackRateChange(rate)}
-                                  className={`block w-full text-left px-2 py-1 rounded ${
+                                  className={`block w-full text-left px-1 sm:px-2 py-0.5 sm:py-1 rounded ${
                                     playbackRate === rate
                                       ? "text-white font-bold"
                                       : "text-gray-300"
@@ -854,7 +897,7 @@ const MoviePlayer = () => {
                   </div>
                   <button
                     onClick={toggleFullScreen}
-                    className="text-white hover:text-gray-300 text-2xl"
+                    className="text-white hover:bg-transparent p-1 rounded-full text-lg sm:text-2xl"
                   >
                     {isFullScreen ? <MdFullscreenExit /> : <MdFullscreen />}
                   </button>
@@ -866,9 +909,9 @@ const MoviePlayer = () => {
       </div>
 
       {mediaType === "tv" && (
-        <div className="container mx-auto p-4">
-          <h2 className="text-2xl font-bold mb-4">Episodes</h2>
-          <div className="flex overflow-x-auto space-x-4 pb-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
+        <div className="container mx-auto p-2 sm:p-4">
+          <h2 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-4">Episodes</h2>
+          <div className="flex overflow-x-auto space-x-2 sm:space-x-4 pb-2 sm:pb-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
             {episodes.length > 0 ? (
               episodes.map((episode) => {
                 const currentEpisodeNumber =
@@ -881,49 +924,49 @@ const MoviePlayer = () => {
                   <div
                     key={episode.id}
                     onClick={() => handleEpisodeChange(episode)}
-                    className={`flex-shrink-0 w-30 p-2 rounded-lg cursor-pointer transition-all ${
+                    className={`flex-shrink-0 w-16 sm:w-30 p-1 sm:p-2 rounded-lg cursor-pointer transition-all ${
                       isActive
                         ? "bg-yellow-500 border-yellow-300"
                         : "bg-slate-700 hover:bg-slate-600 border-slate-600"
                     }`}
                   >
-                    <h3 className="text-sm font-semibold text-center">
+                    <h3 className="text-xs sm:text-sm font-semibold text-center">
                       Episode {currentEpisodeNumber}
                     </h3>
                   </div>
                 );
               })
             ) : (
-              <p className="text-gray-400">No episodes available.</p>
+              <p className="text-gray-400 text-sm">No episodes available.</p>
             )}
           </div>
         </div>
       )}
 
-      <div className="container mx-auto p-4">
-        <h2 className="text-2xl font-bold mb-4">Comments</h2>
-        <form onSubmit={handleAddComment} className="mb-6">
-          <div className="flex items-center space-x-3">
+      <div className="container mx-auto p-2 sm:p-4">
+        <h2 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-4">Comments</h2>
+        <form onSubmit={handleAddComment} className="mb-3 sm:mb-6">
+          <div className="flex items-center space-x-1 sm:space-x-3">
             <input
               type="text"
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="Add a comment..."
-              className="flex-1 p-3 rounded-lg bg-gray-800 text-white border border-gray-700 focus:outline-none focus:border-yellow-400"
+              className="flex-1 p-2 sm:p-3 rounded-lg bg-gray-800 text-white text-sm sm:text-base border border-gray-700 focus:outline-none focus:border-yellow-400"
             />
             <button
               type="submit"
-              className="px-4 py-2 bg-yellow-500 rounded-lg hover:bg-yellow-400 transition-all"
+              className="px-2 sm:px-4 py-1 sm:py-2 bg-yellow-500 rounded-lg hover:bg-yellow-400 transition-all text-sm sm:text-base"
             >
               Post
             </button>
           </div>
         </form>
-        <div className="space-y-4">
+        <div className="space-y-2 sm:space-y-4">
           {comments.length > 0 ? (
             renderComments(comments)
           ) : (
-            <p className="text-gray-400 text-center">
+            <p className="text-gray-400 text-center text-sm sm:text-base">
               No comments yet. Be the first to comment!
             </p>
           )}

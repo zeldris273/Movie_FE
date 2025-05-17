@@ -27,6 +27,11 @@ export default function CreateMovie() {
     checkAdminRole();
   }, []);
 
+   useEffect(() => {
+      window.scrollTo(0, 0);
+    }, [location]);
+  
+
   const checkAdminRole = () => {
     const token = localStorage.getItem("accessToken");
     console.log("Token:", token);

@@ -25,6 +25,11 @@ export default function CreateTvSeries() {
     checkAdminRole();
   }, []);
 
+   useEffect(() => {
+      window.scrollTo(0, 0);
+    }, [location]);
+  
+
   const checkAdminRole = () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {

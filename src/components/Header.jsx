@@ -15,15 +15,29 @@ const Header = () => {
   const { token } = useSelector((state) => state.auth);
 
   const removeSpace = location?.search?.slice(3)?.split("%20")?.join(" ");
-  const [searchInput, setSearchInput] = useState(removeSpace);
+  const [searchInput, setSearchInput] = useState(removeSpace || ""); // Khởi tạo với giá trị rỗng nếu không có query
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Effect để theo dõi sự thay đổi của location và reset searchInput
+  useEffect(() => {
+    // Nếu không phải trang search, reset searchInput
+    if (!location.pathname.startsWith("/search")) {
+      setSearchInput("");
+    } else {
+      // Nếu là trang search, cập nhật searchInput từ query
+      const query = location?.search?.slice(3)?.split("%20")?.join(" ") || "";
+      setSearchInput(query);
+    }
+  }, [location.pathname, location.search]); // Theo dõi cả pathname và search
+
+  // Effect để điều hướng khi searchInput thay đổi
   useEffect(() => {
     if (searchInput) {
       navigate(`/search?q=${searchInput}`);
     }
   }, [searchInput, navigate]);
 
+  // Effect để kiểm tra quyền admin
   useEffect(() => {
     if (token) {
       try {

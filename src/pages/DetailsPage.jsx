@@ -34,11 +34,15 @@ const DetailsPage = () => {
   const [data, setData] = useState(null);
   const [playVideo, setPlayVideo] = useState(false);
   const [playVideoId, setPlayVideoId] = useState("");
-  // const [episodes, setEpisodes] = useState([]);
-  // const [episodeError, setEpisodeError] = useState(null);
+  const [episodes, setEpisodes] = useState([]);
+  const [episodeError, setEpisodeError] = useState(null);
   const [isInWatchList, setIsInWatchList] = useState(false);
   const [userRating, setUserRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
+
+  useEffect(() => {
+    window.scrollTo(0, 0); 
+  }, [location])
 
   useEffect(() => {
     if (fetchedData) {
@@ -68,38 +72,38 @@ const DetailsPage = () => {
     checkWatchList();
   }, [id, mediaType]);
 
-  // useEffect(() => {
-  //   const fetchEpisodes = async () => {
-  //     if (mediaType !== 'tv' || !id) return;
+  useEffect(() => {
+    const fetchEpisodes = async () => {
+      if (mediaType !== 'tv' || !id) return;
 
-  //     try {
-  //       const seasonsResponse = await api.get(`/api/tvseries/${id}/seasons`);
-  //       const seasons = seasonsResponse.data;
+      try {
+        const seasonsResponse = await api.get(`/api/tvseries/${id}/seasons`);
+        const seasons = seasonsResponse.data;
 
-  //       if (seasons.length > 0) {
-  //         const episodesResponse = await api.get(
-  //           `/api/tvseries/seasons/${seasons[0].id}/episodes`
-  //         );
-  //         setEpisodes(episodesResponse.data);
+        if (seasons.length > 0) {
+          const episodesResponse = await api.get(
+            `/api/tvseries/seasons/${seasons[0].id}/episodes`
+          );
+          setEpisodes(episodesResponse.data);
 
-  //         if (episodesResponse.data.length === 0) {
-  //           setEpisodeError('No episodes found for this season.');
-  //         }
-  //       } else {
-  //         setEpisodeError('No seasons found for this series.');
-  //       }
-  //     } catch (err) {
-  //       console.error('Error fetching episodes:', err);
-  //       setEpisodeError(
-  //         err.response?.status === 404
-  //           ? 'Season not found or no episodes available.'
-  //           : 'Failed to fetch episodes.'
-  //       );
-  //     }
-  //   };
+          if (episodesResponse.data.length === 0) {
+            setEpisodeError('No episodes found for this season.');
+          }
+        } else {
+          setEpisodeError('No seasons found for this series.');
+        }
+      } catch (err) {
+        console.error('Error fetching episodes:', err);
+        setEpisodeError(
+          err.response?.status === 404
+            ? 'Season not found or no episodes available.'
+            : 'Failed to fetch episodes.'
+        );
+      }
+    };
 
-  //   fetchEpisodes();
-  // }, [mediaType, id]);
+    fetchEpisodes();
+  }, [mediaType, id]);
 
   const handleAddToWatchList = async () => {
     const token = localStorage.getItem("accessToken");
