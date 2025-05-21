@@ -10,6 +10,7 @@ import CreateMovie from "../pages/CreateMovie";
 import CreateTvSeries from "../pages/CreateTvSeries";
 import AddEpisode from "../pages/AddEpisode";
 import MoviePlayer from "../pages/MoviePlayer";
+import AdminDashboard from "../pages/AdminDashboard";
 
 const router = createBrowserRouter([
   {
@@ -56,17 +57,9 @@ const router = createBrowserRouter([
         path: "watchlist",
         element: <Watchlist />,
       },
-      {
-        path: "create-movie",
-        element: <CreateMovie />,
-      },
-      {
-        path: "create-tv-series",
-        element: <CreateTvSeries />,
-      },
-      {
-        path: "add-episode",
-        element: <AddEpisode />,
+       {
+        path: "admin-dashboard",
+        element: <AdminDashboard />,
       },
     ],
   },

@@ -18,6 +18,10 @@ const ExplorePage = () => {
     }
   }, [location.pathname]);
 
+    useEffect(() => {
+      window.scrollTo(0, 0);
+    }, [location]);
+
   const fetchData = async () => {
     try {
       if (!mediaType) return; // Đợi mediaType được thiết lập
