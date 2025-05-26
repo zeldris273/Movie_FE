@@ -6,11 +6,9 @@ import DetailsPage from "../pages/DetailsPage";
 import SearchPage from "../pages/SearchPage";
 import AuthPage from "../pages/AuthPage";
 import Watchlist from "../pages/Watchlist";
-import CreateMovie from "../pages/CreateMovie";
-import CreateTvSeries from "../pages/CreateTvSeries";
-import AddEpisode from "../pages/AddEpisode";
 import MoviePlayer from "../pages/MoviePlayer";
 import AdminDashboard from "../pages/AdminDashboard";
+import NotFoundPage from "../pages/NotFoundPage";
 
 const router = createBrowserRouter([
   {
@@ -61,6 +59,10 @@ const router = createBrowserRouter([
         path: "admin-dashboard",
         element: <AdminDashboard />,
       },
+      {
+        path: "*",
+        element: <NotFoundPage />,
+      }
     ],
   },
 ]);

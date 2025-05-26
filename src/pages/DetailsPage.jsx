@@ -10,6 +10,7 @@ import api from "../api/api";
 import Swal from "sweetalert2";
 import { FaStar } from "react-icons/fa";
 import { FaUser } from "react-icons/fa";
+import { jwtDecode } from "jwt-decode";
 
 // Hàm chuyển đổi tiêu đề thành slug
 const createSlug = (title) => {
@@ -39,10 +40,11 @@ const DetailsPage = () => {
   const [isInWatchList, setIsInWatchList] = useState(false);
   const [userRating, setUserRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false); // Thêm state isAdmin
 
   useEffect(() => {
-    window.scrollTo(0, 0); 
-  }, [location])
+    window.scrollTo(0, 0);
+  }, [location]);
 
   useEffect(() => {
     if (fetchedData) {
@@ -74,7 +76,7 @@ const DetailsPage = () => {
 
   useEffect(() => {
     const fetchEpisodes = async () => {
-      if (mediaType !== 'tv' || !id) return;
+      if (mediaType !== "tv" || !id) return;
 
       try {
         const seasonsResponse = await api.get(`/api/tvseries/${id}/seasons`);
@@ -87,23 +89,71 @@ const DetailsPage = () => {
           setEpisodes(episodesResponse.data);
 
           if (episodesResponse.data.length === 0) {
-            setEpisodeError('No episodes found for this season.');
+            setEpisodeError("No episodes found for this season.");
           }
         } else {
-          setEpisodeError('No seasons found for this series.');
+          setEpisodeError("No seasons found for this series.");
         }
       } catch (err) {
-        console.error('Error fetching episodes:', err);
+        console.error("Error fetching episodes:", err);
         setEpisodeError(
           err.response?.status === 404
-            ? 'Season not found or no episodes available.'
-            : 'Failed to fetch episodes.'
+            ? "Season not found or no episodes available."
+            : "Failed to fetch episodes."
         );
       }
     };
 
     fetchEpisodes();
   }, [mediaType, id]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        const adminRole =
+          decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ===
+          "admin";
+        setIsAdmin(adminRole); // Cập nhật state isAdmin
+        if (!adminRole) {
+          Swal.fire({
+            title: "Cảnh báo!",
+            text: "Bạn không có quyền truy cập trang này!",
+            icon: "warning",
+            background: "#1f2937",
+            color: "#fff",
+            confirmButtonColor: "#facc15",
+          });
+          navigate("/");
+        } else {
+          // fetchMovies và fetchTvSeries không được định nghĩa trong code
+          // Nếu cần, bạn có thể thêm logic để gọi API tại đây
+        }
+      } catch (err) {
+        console.error("Error decoding token:", err);
+        Swal.fire({
+          title: "Lỗi!",
+          text: "Token không hợp lệ!",
+          icon: "error",
+          background: "#1f2937",
+          color: "#fff",
+          confirmButtonColor: "#facc15",
+        });
+        navigate("/auth");
+      }
+    } else {
+      Swal.fire({
+        title: "Lỗi!",
+        text: "Bạn chưa đăng nhập!",
+        icon: "error",
+        background: "#1f2937",
+        color: "#fff",
+        confirmButtonColor: "#facc15",
+      });
+      navigate("/auth");
+    }
+  }, [navigate]);
 
   const handleAddToWatchList = async () => {
     const token = localStorage.getItem("accessToken");
@@ -336,19 +386,21 @@ const DetailsPage = () => {
           >
             Play Now
           </button>
-          <button
-            onClick={handleAddToWatchList}
-            className={`flex flex-col items-center justify-center gap-1 w-full cursor-pointer px-3 py-2 border border-black rounded-lg text-white transition mt-5 ${
-              isInWatchList
-                ? "bg-green-600"
-                : "bg-black/30 hover:bg-transparent"
-            }`}
-            disabled={isInWatchList}
-          >
-            <span className="text-sm font-medium">
-              {isInWatchList ? "Added to Watch List" : "+ Add to Watch List"}
-            </span>
-          </button>
+          {!isAdmin && ( // Chỉ hiển thị nút Add to Watchlist nếu không phải admin
+            <button
+              onClick={handleAddToWatchList}
+              className={`flex flex-col items-center justify-center gap-1 w-full cursor-pointer px-3 py-2 border border-black rounded-lg text-white transition mt-5 ${
+                isInWatchList
+                  ? "bg-green-600"
+                  : "bg-black/30 hover:bg-transparent"
+              }`}
+              disabled={isInWatchList}
+            >
+              <span className="text-sm font-medium">
+                {isInWatchList ? "Added to Watch List" : "+ Add to Watch List"}
+              </span>
+            </button>
+          )}
         </div>
 
         <div>
