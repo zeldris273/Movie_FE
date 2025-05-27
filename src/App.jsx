@@ -31,7 +31,7 @@ function App() {
       {isChatbotOpen && (
         <div className="fixed bottom-20 right-5 w-80 h-96 bg-white rounded-lg shadow-lg flex flex-col z-50 border border-gray-300">
           <div className="bg-yellow-500 text-white p-2 flex justify-between items-center rounded-t-lg">
-            <h2 className="text-lg font-semibold">Movie Chatbot</h2>
+            <h2 className="text-lg font-semibold">Movie Finder Chatbot</h2>
             <button
               onClick={() => setIsChatbotOpen(false)}
               className="text-white hover:text-gray-200 focus:outline-none"

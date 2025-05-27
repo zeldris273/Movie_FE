@@ -27,7 +27,7 @@ const MoviePlayer = () => {
   const [menuOpen, setMenuOpen] = useState(null);
   const [qualityLevels, setQualityLevels] = useState([]);
   const [selectedQuality, setSelectedQuality] = useState(-1);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false); // Chỉ đổi khi người dùng nhấp
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
@@ -37,6 +37,8 @@ const MoviePlayer = () => {
   const [settingsTab, setSettingsTab] = useState("quality");
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [showResumePrompt, setShowResumePrompt] = useState(false);
+  const [savedTime, setSavedTime] = useState(null);
   const videoRef = useRef(null);
   const containerRef = useRef(null);
   const controlsTimeoutRef = useRef(null);
@@ -44,13 +46,62 @@ const MoviePlayer = () => {
 
   const mediaType = location.pathname.includes("movies") ? "movie" : "tv";
 
+  // Tạo key duy nhất để lưu thời gian dựa trên id và episodeNumber (nếu có)
+  const getStorageKey = () => {
+    return mediaType === "movie"
+      ? `watchTime_${id}`
+      : `watchTime_${id}_episode_${episodeNumber}`;
+  };
+
+  // Kiểm tra thời gian xem từ localStorage khi component mount
+  useEffect(() => {
+    const savedTime = localStorage.getItem(getStorageKey());
+    if (savedTime) {
+      setSavedTime(parseFloat(savedTime));
+      setShowResumePrompt(true); // Hiển thị thông báo
+    }
+  }, [id, episodeNumber, mediaType]);
+
+  // Xử lý khi người dùng chọn tiếp tục xem
+  const handleResume = () => {
+    const video = videoRef.current;
+    if (video && savedTime) {
+      video.currentTime = savedTime;
+      setCurrentTime(savedTime);
+      video.play().catch((err) => {
+        console.error("Play failed:", err.message);
+        setError("Failed to play video. Please click play manually.");
+      });
+      setIsPlaying(true);
+    }
+    setShowResumePrompt(false);
+  };
+
+  // Xử lý khi người dùng chọn xem từ đầu
+  const handleStartOver = () => {
+    localStorage.removeItem(getStorageKey());
+    setCurrentTime(0);
+    const video = videoRef.current;
+    if (video) {
+      video.currentTime = 0;
+      video.play().catch((err) => {
+        console.error("Play failed:", err.message);
+        setError("Failed to play video. Please click play manually.");
+      });
+      setIsPlaying(true);
+    }
+    setShowResumePrompt(false);
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     if (token) {
       try {
         const decoded = jwtDecode(token);
         const userId =
-          decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"];
+          decoded[
+            "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"
+          ];
         setCurrentUserId(parseInt(userId, 10));
       } catch (err) {
         console.error("Error decoding token:", err);
@@ -173,10 +224,7 @@ const MoviePlayer = () => {
         console.log("Manifest parsed, quality levels:", hls.levels);
         setQualityLevels(hls.levels);
         setSelectedQuality(hls.currentLevel);
-        video.play().catch((err) => {
-          console.error("Auto-play failed:", err.message);
-          setError("Auto-play blocked. Please click play to start the video.");
-        });
+        // Không tự động play, chờ người dùng nhấp
       });
 
       hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
@@ -214,10 +262,7 @@ const MoviePlayer = () => {
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
       console.log("Using native HLS:", videoUrl);
       video.src = videoUrl;
-      video.play().catch((err) => {
-        console.error("Auto-play failed:", err.message);
-        setError("Auto-play blocked. Please click play to start the video.");
-      });
+      // Không tự động play, chờ người dùng nhấp
     } else {
       setError("HLS is not supported in this browser.");
     }
@@ -229,6 +274,7 @@ const MoviePlayer = () => {
 
     const updateTime = () => {
       setCurrentTime(video.currentTime);
+      localStorage.setItem(getStorageKey(), video.currentTime.toString());
     };
 
     const setVideoDuration = () => {
@@ -237,12 +283,16 @@ const MoviePlayer = () => {
 
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      localStorage.removeItem(getStorageKey());
+    };
 
     video.addEventListener("timeupdate", updateTime);
     video.addEventListener("loadedmetadata", setVideoDuration);
     video.addEventListener("play", handlePlay);
     video.addEventListener("pause", handlePause);
-    video.addEventListener("ended", () => setIsPlaying(false));
+    video.addEventListener("ended", handleEnded);
 
     video.playbackRate = playbackRate;
     video.muted = isMuted;
@@ -252,7 +302,7 @@ const MoviePlayer = () => {
       video.removeEventListener("loadedmetadata", setVideoDuration);
       video.removeEventListener("play", handlePlay);
       video.removeEventListener("pause", handlePause);
-      video.removeEventListener("ended", () => setIsPlaying(false));
+      video.removeEventListener("ended", handleEnded);
     };
   }, [videoUrl, playbackRate, isMuted]);
 
@@ -290,7 +340,7 @@ const MoviePlayer = () => {
     } else {
       video.play().catch((err) => {
         console.error("Play failed:", err.message);
-        setError("Failed to play video. Please try again.");
+        setError("Failed to play video. Please click play manually.");
       });
     }
     setIsPlaying(!isPlaying);
@@ -302,6 +352,7 @@ const MoviePlayer = () => {
     const seekTime = (e.target.value / 100) * duration;
     video.currentTime = seekTime;
     setCurrentTime(seekTime);
+    localStorage.setItem(getStorageKey(), seekTime.toString());
   };
 
   const handleQualityChange = (level) => {
@@ -384,6 +435,7 @@ const MoviePlayer = () => {
     if (video) {
       video.currentTime = Math.min(video.currentTime + 5, duration);
       setCurrentTime(video.currentTime);
+      localStorage.setItem(getStorageKey(), video.currentTime.toString());
     }
   };
 
@@ -392,6 +444,7 @@ const MoviePlayer = () => {
     if (video) {
       video.currentTime = Math.max(video.currentTime - 5, 0);
       setCurrentTime(video.currentTime);
+      localStorage.setItem(getStorageKey(), video.currentTime.toString());
     }
   };
 
@@ -567,7 +620,9 @@ const MoviePlayer = () => {
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <span className="font-semibold text-sm sm:text-base">{comment.username}</span>
+            <span className="font-semibold text-sm sm:text-base">
+              {comment.username}
+            </span>
             <span className="text-gray-400 text-xs sm:text-sm">
               {new Date(comment.timestamp).toLocaleString()}
             </span>
@@ -638,7 +693,9 @@ const MoviePlayer = () => {
             </button>
           </form>
         ) : (
-          <p className="text-gray-300 text-sm sm:text-base">{comment.commentText}</p>
+          <p className="text-gray-300 text-sm sm:text-base">
+            {comment.commentText}
+          </p>
         )}
 
         <button
@@ -713,11 +770,40 @@ const MoviePlayer = () => {
 
   return (
     <div className="bg-neutral-900 min-h-screen text-white">
+      {showResumePrompt && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-4 sm:p-6 w-80 sm:w-96 text-center">
+            <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-4">
+              Resume Playback
+            </h3>
+            <p className="text-sm sm:text-base mb-4 sm:mb-6">
+              You previously watched up to {formatTime(savedTime)}. Would you
+              like to resume from there?
+            </p>
+            <div className="flex justify-center space-x-2 sm:space-x-4">
+              <button
+                onClick={handleResume}
+                className="px-4 sm:px-6 py-2 bg-yellow-500 rounded-lg hover:bg-yellow-400 text-sm sm:text-base"
+              >
+                Resume
+              </button>
+              <button
+                onClick={handleStartOver}
+                className="px-4 sm:px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 text-sm sm:text-base"
+              >
+                Start Over
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div
         ref={containerRef}
         className={`container mx-auto p-2 sm:p-4 my-2 sm:my-10 ${
           isFullScreen ? "fixed top-0 left-0 w-screen h-screen" : ""
         }`}
+        style={{ width: "80%", height: "auto", margin: "0 auto" }}
         onMouseMove={handleMouseMove}
       >
         <div
@@ -731,6 +817,14 @@ const MoviePlayer = () => {
             controls={false}
             disablePictureInPicture
             onContextMenu={(e) => e.preventDefault()}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowLeft") {
+                handleSkipBackward(); 
+              } else if (e.key === "ArrowRight") {
+                handleSkipForward(); 
+              }
+            }}
+            tabIndex={0}
           />
 
           {showControls && (
@@ -910,7 +1004,9 @@ const MoviePlayer = () => {
 
       {mediaType === "tv" && (
         <div className="container mx-auto p-2 sm:p-4">
-          <h2 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-4">Episodes</h2>
+          <h2 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-4">
+            Episodes
+          </h2>
           <div className="flex overflow-x-auto space-x-2 sm:space-x-4 pb-2 sm:pb-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
             {episodes.length > 0 ? (
               episodes.map((episode) => {

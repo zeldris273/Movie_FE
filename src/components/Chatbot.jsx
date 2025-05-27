@@ -3,9 +3,15 @@ import api from '../api/api';
 import { IoSendSharp } from 'react-icons/io5';
 
 const Chatbot = () => {
-  const [messages, setMessages] = useState([
-    { text: 'Hello! I can help you find movies. Please describe the movie you’re looking for.', isUser: false },
-  ]);
+  // Khởi tạo messages từ localStorage nếu có, nếu không thì dùng giá trị mặc định
+  const [messages, setMessages] = useState(() => {
+    const savedMessages = localStorage.getItem('chatHistory');
+    return savedMessages
+      ? JSON.parse(savedMessages)
+      : [
+          { text: 'Hello! I can help you find movies. Please describe the movie you’re looking for.', isUser: false },
+        ];
+  });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
@@ -16,6 +22,11 @@ const Chatbot = () => {
 
   useEffect(() => {
     scrollToBottom();
+  }, [messages]);
+
+  // Lưu messages vào localStorage mỗi khi messages thay đổi
+  useEffect(() => {
+    localStorage.setItem('chatHistory', JSON.stringify(messages));
   }, [messages]);
 
   const handleSendMessage = async () => {
@@ -35,22 +46,25 @@ const Chatbot = () => {
         throw new Error('Failed to fetch movies. Please try again.');
       }
 
-      // Dữ liệu từ backend có dạng { MovieTitles, Genre, Year, Actors, Themes, Keywords }
       const searchCriteria = response.data;
-      console.log('Search Criteria:', searchCriteria); // Log để kiểm tra
 
-      // Chuyển đổi thành mảng phim để hiển thị
-      const movies = searchCriteria.MovieTitles.map((title, index) => ({
-        title: title,
-        overview: searchCriteria.Themes || 'No description available', // Dùng Themes làm overview
-        genres: searchCriteria.Genre || 'Unknown',
-        actors: searchCriteria.Actors || 'Unknown',
-        releaseDate: searchCriteria.Year || 'Unknown',
-      }));
+      let botMessage;
 
-      const botMessage = movies.length > 0
-        ? { text: 'Here are the movies I found:', isUser: false, movies }
-        : { text: 'Sorry, I couldn’t find any movies matching your description.', isUser: false };
+      if (searchCriteria.Error) {
+        botMessage = { text: `Error: ${searchCriteria.Error}`, isUser: false };
+      } else {
+        const movies = searchCriteria.MovieTitles.map((title, index) => ({
+          title: title,
+          overview: searchCriteria.Themes || 'No description available',
+          genres: searchCriteria.Genre || 'Unknown',
+          actors: searchCriteria.Actors || 'Unknown',
+          releaseDate: searchCriteria.Year || 'Unknown',
+        }));
+
+        botMessage = movies.length > 0
+          ? { text: 'Here are the movies I found:', isUser: false, movies }
+          : { text: 'Sorry, I couldn’t find any movies matching your description.', isUser: false };
+      }
 
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
@@ -105,7 +119,7 @@ const Chatbot = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-            className="flex-1 p-1 border rounded-lg focus:outline-none focus:ring-1 focus:ring-yellow-500 text-sm"
+            className="flex-1 p-1 border rounded-lg focus:outline-none focus:ring-1 focus:ring-yellow-500 text-sm text-gray-900"
             placeholder="Enter movie description..."
           />
           <button
