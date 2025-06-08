@@ -2,15 +2,15 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import useFetchDetails from "../hooks/useFetchDetails";
 import moment from "moment";
-import Divider from "../components/Divider";
+import Divider from "../components/common/Divider";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
-import VideoPlay from "../components/VideoPlay";
+import VideoTrailerFrame from "../components/Frame/VideoTrailerFrame";
 import api from "../api/api";
 import Swal from "sweetalert2";
 import { FaStar } from "react-icons/fa";
 import { FaUser } from "react-icons/fa";
-import { jwtDecode } from "jwt-decode";
+  import { jwtDecode } from "jwt-decode";
 
 // Hàm chuyển đổi tiêu đề thành slug
 const createSlug = (title) => {
@@ -40,7 +40,8 @@ const DetailsPage = () => {
   const [isInWatchList, setIsInWatchList] = useState(false);
   const [userRating, setUserRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
-  const [isAdmin, setIsAdmin] = useState(false); // Thêm state isAdmin
+  const [isAdmin, setIsAdmin] = useState(false); // State cho Admin
+  const [isUser, setIsUser] = useState(false);   // State cho user
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -48,7 +49,6 @@ const DetailsPage = () => {
 
   useEffect(() => {
     if (fetchedData) {
-      console.log("Fetched data:", fetchedData);
       setData(fetchedData);
     }
   }, [fetchedData]);
@@ -112,11 +112,12 @@ const DetailsPage = () => {
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        const adminRole =
-          decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ===
-          "admin";
-        setIsAdmin(adminRole); // Cập nhật state isAdmin
-        if (!adminRole) {
+        const role = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+        setIsAdmin(role === "Admin");
+        setIsUser(role === "User"); // Kiểm tra role là "user"
+
+        // Redirect nếu không phải Admin hoặc user
+        if (role !== "Admin" && role !== "User") {
           Swal.fire({
             title: "Cảnh báo!",
             text: "Bạn không có quyền truy cập trang này!",
@@ -126,9 +127,6 @@ const DetailsPage = () => {
             confirmButtonColor: "#facc15",
           });
           navigate("/");
-        } else {
-          // fetchMovies và fetchTvSeries không được định nghĩa trong code
-          // Nếu cần, bạn có thể thêm logic để gọi API tại đây
         }
       } catch (err) {
         console.error("Error decoding token:", err);
@@ -218,62 +216,73 @@ const DetailsPage = () => {
   };
 
   const handleRatingSubmit = async (rating) => {
-    const token = localStorage.getItem("accessToken");
-    if (!token) {
+  const token = localStorage.getItem("accessToken");
+  if (!token) {
+    Swal.fire({
+      title: "",
+      text: "Please log in to rate this media.",
+      icon: "error",
+      background: "#222222",
+      color: "#fff",
+      confirmButtonColor: "#ffcc00",
+    });
+    navigate("/auth");
+    return;
+  }
+
+  try {
+    const response = await api.post("/api/ratings", {
+      MediaId: parseInt(id),
+      MediaType: mediaType,
+      Rating: rating,
+    });
+
+    if (response.status === 200) {
       Swal.fire({
         title: "",
-        text: "Please log in to rate this media.",
-        icon: "error",
+        text: "Thank you for your rating!",
+        icon: "success",
         background: "#222222",
         color: "#fff",
         confirmButtonColor: "#ffcc00",
       });
-      navigate("/auth");
-      return;
-    }
 
-    try {
-      const response = await api.post("/api/ratings", {
-        MediaId: parseInt(id),
-        MediaType: mediaType,
-        Rating: rating,
-      });
-
-      if (response.status === 200) {
-        Swal.fire({
-          title: "",
-          text: "Thank you for your rating!",
-          icon: "success",
-          background: "#222222",
-          color: "#fff",
-          confirmButtonColor: "#ffcc00",
-        });
-
-        if (response.data.averageRating && response.data.numberOfRatings) {
-          setData((prevData) => ({
-            ...prevData,
-            rating: response.data.averageRating,
-            numberOfRatings: response.data.numberOfRatings,
-          }));
-        }
-
-        const updatedData = await fetchMediaDetails();
-        if (updatedData) {
-          setData(updatedData);
-        }
+      if (response.data.averageRating && response.data.numberOfRatings) {
+        setData((prevData) => ({
+          ...prevData,
+          rating: response.data.averageRating,
+          numberOfRatings: response.data.numberOfRatings,
+        }));
       }
-    } catch (error) {
-      console.error("Error submitting rating:", error);
-      Swal.fire({
-        title: "",
-        text: error.response?.data?.error || "Failed to submit rating.",
-        icon: "error",
-        background: "#222222",
-        color: "#fff",
-        confirmButtonColor: "#ffcc00",
-      });
+
+      const updatedData = await fetchMediaDetails();
+      if (updatedData) {
+        setData(updatedData);
+      }
     }
-  };
+  } catch (error) {
+    console.error("Error submitting rating:", error.response?.data || error.message);
+    let errorMessage = "Failed to submit rating.";
+    if (error.response?.status === 401) {
+      errorMessage = "Session expired. Please log in again.";
+      // Interceptor đã xử lý refresh, nhưng nếu thất bại, chuyển hướng
+      if (!localStorage.getItem("accessToken")) {
+        navigate("/auth");
+      }
+    } else if (error.response?.data?.error) {
+      errorMessage = error.response.data.error;
+    }
+
+    Swal.fire({
+      title: "",
+      text: errorMessage,
+      icon: "error",
+      background: "#222222",
+      color: "#fff",
+      confirmButtonColor: "#ffcc00",
+    });
+  }
+};
 
   const handlePlayVideo = (data) => {
     setPlayVideoId(data);
@@ -386,7 +395,7 @@ const DetailsPage = () => {
           >
             Play Now
           </button>
-          {!isAdmin && ( // Chỉ hiển thị nút Add to Watchlist nếu không phải admin
+          {!isAdmin && ( // Chỉ hiển thị nút Add to Watchlist nếu không phải Admin
             <button
               onClick={handleAddToWatchList}
               className={`flex flex-col items-center justify-center gap-1 w-full cursor-pointer px-3 py-2 border border-black rounded-lg text-white transition mt-5 ${
@@ -551,7 +560,7 @@ const DetailsPage = () => {
       </div>
 
       {playVideo && (
-        <VideoPlay
+        <VideoTrailerFrame
           data={playVideoId}
           close={() => setPlayVideo(false)}
           media_type={mediaType}

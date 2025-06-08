@@ -20,7 +20,6 @@ const BannerHome = () => {
         });
         setBannerData(response.data.data || []); // Đảm bảo giá trị mặc định là mảng rỗng
         setLoading(false);
-        console.log(response.data)
       } catch (err) {
         setError(err.response?.data?.error || 'Failed to fetch new releases');
         setLoading(false);

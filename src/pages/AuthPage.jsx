@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FaLock, FaEnvelope } from "react-icons/fa";
 import { useDispatch, useSelector } from "react-redux";
 import { loginUser, registerUser, logoutUser } from "../store/authSlice";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import api from "../api/api";
 import Swal from "sweetalert2";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
@@ -15,6 +16,7 @@ export default function AuthPage() {
   const dispatch = useDispatch();
   const { loading, error } = useSelector((state) => state.auth);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const validatePassword = (password) =>
@@ -23,6 +25,10 @@ export default function AuthPage() {
     /[a-z]/.test(password) &&
     /\d/.test(password) &&
     /[\W_]/.test(password);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location]);
 
   const showAlert = (title, text, icon) => {
     Swal.fire({
@@ -41,15 +47,24 @@ export default function AuthPage() {
       return;
     }
     try {
-      const response = await api.post("/api/auth/send-otp", { email }, {
+      const endpoint = isForgotPassword ? "/api/auth/forgot-password" : "/api/auth/send-otp";
+      const response = await api.post(endpoint, { email }, {
         withCredentials: true,
       });
       if (response.status === 200) {
         setIsOtpSent(true);
-        showAlert("OTP Sent", "OTP sent to your email. Please check your inbox.", "success");
+        showAlert(
+          "OTP Sent",
+          "OTP sent to your email. Please check your inbox.",
+          "success"
+        );
       }
     } catch (err) {
-      showAlert("Failed to Send OTP", err.response?.data || err.message, "error");
+      showAlert(
+        "Failed to Send OTP",
+        err.response?.data || err.message,
+        "error"
+      );
     }
   };
 
@@ -66,7 +81,28 @@ export default function AuthPage() {
     }
 
     try {
-      if (isLogin) {
+      if (isForgotPassword) {
+        const response = await api.post("/api/auth/reset-password", {
+          email,
+          otp,
+          password,
+        }, {
+          withCredentials: true,
+        });
+        if (response.status === 200) {
+          showAlert(
+            "Success",
+            "Password reset successfully. Please login with your new password.",
+            "success"
+          );
+          setIsForgotPassword(false);
+          setIsLogin(true);
+          setIsOtpSent(false);
+          setEmail("");
+          setPassword("");
+          setOtp("");
+        }
+      } else if (isLogin) {
         await dispatch(loginUser({ email, password })).unwrap();
         console.log('After login, localStorage accessToken:', {
           accessToken: localStorage.getItem('accessToken'),
@@ -87,7 +123,9 @@ export default function AuthPage() {
       console.error('Dispatch error:', err);
       showAlert(
         "Error",
-        isLogin
+        isForgotPassword
+          ? "Failed to reset password: " + (err.response?.data || err.message)
+          : isLogin
           ? "Invalid credentials: " + (err || "Unknown error")
           : "Invalid OTP or registration failed: " + (err || "Unknown error"),
         "error"
@@ -107,7 +145,9 @@ export default function AuthPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#1a1a1a] text-white">
       <div className="bg-[#222222] p-8 rounded-2xl shadow-lg w-96">
-        <h2 className="text-2xl font-bold text-center mb-6">{isLogin ? "Sign In" : "Sign Up"}</h2>
+        <h2 className="text-2xl font-bold text-center mb-6">
+          {isForgotPassword ? "Forgot Password" : isLogin ? "Sign In" : "Sign Up"}
+        </h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="flex items-center gap-2">
@@ -127,7 +167,7 @@ export default function AuthPage() {
               <FaLock />
               <input
                 type="password"
-                placeholder="Password"
+                placeholder={isForgotPassword ? "New Password" : "Password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-gray-700 p-2 rounded focus:outline-none focus:ring-2 focus:ring-gray-500"
@@ -135,7 +175,7 @@ export default function AuthPage() {
               />
             </label>
           </div>
-          {!isLogin && (
+          {(isForgotPassword || !isLogin) && (
             <div className="flex items-center justify-between mb-4">
               <div className="w-[150px]">
                 <label className="flex items-center gap-2">
@@ -165,32 +205,80 @@ export default function AuthPage() {
             disabled={loading}
             className="w-full bg-white text-gray-900 hover:bg-gray-300 py-2 rounded-full disabled:bg-gray-500"
           >
-            {loading ? "Processing..." : isLogin ? "Login" : "Register"}
+            {loading ? "Processing..." : isForgotPassword ? "Reset Password" : isLogin ? "Login" : "Register"}
           </button>
           {error && (
             <p className="text-red-500 text-center mt-2">
-              {isLogin ? "Invalid credentials" : "Registration failed"}: {error}
+              {isForgotPassword ? "Password reset failed" : isLogin ? "Invalid credentials" : "Registration failed"}: {error}
             </p>
           )}
-          {!isLogin && isOtpSent && (
+          {(isForgotPassword || !isLogin) && isOtpSent && (
             <p className="text-green-500 text-center mt-2">
               OTP sent to your email. Please check your inbox.
             </p>
           )}
         </form>
         <p className="text-center mt-4 text-gray-400">
-          {isLogin ? "Don't have an account?" : "Already have an account?"}
-          <span
-            className="text-gray-200 cursor-pointer hover:underline ml-1"
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setIsOtpSent(false);
-            }}
-          >
-            {isLogin ? "Sign Up" : "Sign In"}
-          </span>
+          {isForgotPassword ? (
+            <>
+              Back to{" "}
+              <span
+                className="text-gray-200 cursor-pointer hover:underline"
+                onClick={() => {
+                  setIsForgotPassword(false);
+                  setIsLogin(true);
+                  setIsOtpSent(false);
+                  setEmail("");
+                  setPassword("");
+                  setOtp("");
+                }}
+              >
+                Sign In
+              </span>
+            </>
+          ) : isLogin ? (
+            <>
+              Don't have an account?{" "}
+              <span
+                className="text-gray-200 cursor-pointer hover:underline"
+                onClick={() => {
+                  setIsLogin(false);
+                  setIsOtpSent(false);
+                }}
+              >
+                Sign Up
+              </span>
+              <br />
+              Forgot your password?{" "}
+              <span
+                className="text-gray-200 cursor-pointer hover:underline"
+                onClick={() => {
+                  setIsForgotPassword(true);
+                  setIsOtpSent(false);
+                  setEmail("");
+                  setPassword("");
+                  setOtp("");
+                }}
+              >
+                Forgot Password
+              </span>
+            </>
+          ) : (
+            <>
+              Already have an account?{" "}
+              <span
+                className="text-gray-200 cursor-pointer hover:underline"
+                onClick={() => {
+                  setIsLogin(true);
+                  setIsOtpSent(false);
+                }}
+              >
+                Sign In
+              </span>
+            </>
+          )}
         </p>
-        {isLogin && localStorage.getItem("accessToken") && (
+        {isLogin && !isForgotPassword && localStorage.getItem("accessToken") && (
           <p className="text-center mt-4">
             <button
               onClick={handleLogout}

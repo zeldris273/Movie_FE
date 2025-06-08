@@ -1,12 +1,11 @@
 import { Outlet } from 'react-router-dom';
 import './App.css';
-import Header from './components/Header';
-import Footer from './components/Footer';
+import Header from './components/common/Header';
+import Footer from './components/common/Footer';
 import MobileNavigation from './components/MobileNavigation';
-import Chatbot from './components/Chatbot';
+import Chatbot from './features/Chatbot'
 import { useState } from 'react';
-import chatbotIcon from './assets/chatbot.png'; // Import ảnh
-
+import chatbotIcon from './assets/chatbot.png';
 function App() {
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
 

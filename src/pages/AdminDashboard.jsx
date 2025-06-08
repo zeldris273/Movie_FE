@@ -3,14 +3,14 @@ import api from "../api/api";
 import { jwtDecode } from "jwt-decode";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
-import TabNavigation from "../components/TabNavigation";
+import TabNavigation from "../components/dashboard/TabNavigation";
 import ErrorMessage from "../components/ErrorMessage";
-import AddMovieForm from "../components/AddMovieForm";
-import AddTvSeriesForm from "../components/AddTvSeriesForm";
-import AddEpisodeForm from "../components/AddEpisodeForm";
-import MovieTable from "../components/MovieTable";
-import TvSeriesTable from "../components/TvSeriesTable";
-import UploadProgress from "../components/UploadProgress";
+import AddMovieForm from "../components/dashboard/AddMovieForm";
+import AddTvSeriesForm from "../components/dashboard/AddTvSeriesForm";
+import AddEpisodeForm from "../components/dashboard/AddEpisodeForm";
+import MovieTable from "../components/dashboard/MovieTable";
+import TvSeriesTable from "../components/dashboard/TvSeriesTable";
+import UploadProgress from "../components/dashboard/UploadProgress";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -103,7 +103,9 @@ const AdminDashboard = () => {
       try {
         const decoded = jwtDecode(token);
         const adminRole =
-          decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] === "admin";
+          decoded[
+            "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+          ] === "Admin";
         setIsAdmin(adminRole);
         if (!adminRole) {
           Swal.fire({
@@ -149,7 +151,9 @@ const AdminDashboard = () => {
       const response = await api.get("/api/movies");
       setMovies(response.data || []);
     } catch (err) {
-      setError("Failed to fetch movies: " + (err.response?.data?.error || err.message));
+      setError(
+        "Failed to fetch movies: " + (err.response?.data?.error || err.message)
+      );
     }
   };
 
@@ -162,7 +166,10 @@ const AdminDashboard = () => {
       }));
       setTvSeries(seriesData);
     } catch (err) {
-      setError("Failed to fetch TV series: " + (err.response?.data?.error || err.message));
+      setError(
+        "Failed to fetch TV series: " +
+          (err.response?.data?.error || err.message)
+      );
     }
   };
 
@@ -181,15 +188,28 @@ const AdminDashboard = () => {
         });
       }
     } catch (error) {
-      setError("Failed to fetch seasons: " + (error.response?.data?.error || error.message));
+      setError(
+        "Failed to fetch seasons: " +
+          (error.response?.data?.error || error.message)
+      );
     }
   };
 
   const handleAddMovie = async (e) => {
     e.preventDefault();
-    const { title, status, type, videoFile, backdropFile, posterFile } = newMovie;
-    if (!title || !status || !type || !videoFile || !backdropFile || !posterFile) {
-      setError("Vui lòng điền đầy đủ thông tin: Title, Status, Type, Video, Backdrop, và Poster!");
+    const { title, status, type, videoFile, backdropFile, posterFile } =
+      newMovie;
+    if (
+      !title ||
+      !status ||
+      !type ||
+      !videoFile ||
+      !backdropFile ||
+      !posterFile
+    ) {
+      setError(
+        "Vui lòng điền đầy đủ thông tin: Title, Status, Type, Video, Backdrop, và Poster!"
+      );
       return;
     }
 
@@ -212,36 +232,37 @@ const AdminDashboard = () => {
     uploadData.append("PosterFile", newMovie.posterFile);
 
     try {
-      const response = await api.post(
-        "/api/movies/create",
-        uploadData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.total > 0) {
-              const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-              setUploadProgress(percent);
-            }
-          },
-        }
-      );
+      const response = await api.post("/api/movies/create", uploadData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total > 0) {
+            const percent = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            setUploadProgress(percent);
+          }
+        },
+      });
 
-      setMovies([...movies, {
-        id: response.data.id,
-        title: newMovie.title,
-        overview: newMovie.overview,
-        genres: newMovie.genres,
-        status: newMovie.status,
-        releaseDate: newMovie.releaseDate,
-        studio: newMovie.studio,
-        director: newMovie.director,
-        posterUrl: response.data.imageUrls[1],
-        backdropUrl: response.data.imageUrls[0],
-        videoUrl: response.data.videoUrl,
-      }]);
+      setMovies([
+        ...movies,
+        {
+          id: response.data.id,
+          title: newMovie.title,
+          overview: newMovie.overview,
+          genres: newMovie.genres,
+          status: newMovie.status,
+          releaseDate: newMovie.releaseDate,
+          studio: newMovie.studio,
+          director: newMovie.director,
+          posterUrl: response.data.imageUrls[1],
+          backdropUrl: response.data.imageUrls[0],
+          videoUrl: response.data.videoUrl,
+        },
+      ]);
 
       setNewMovie({
         title: "",
@@ -268,7 +289,9 @@ const AdminDashboard = () => {
         confirmButtonColor: "#facc15",
       });
     } catch (err) {
-      setError("Failed to add movie: " + (err.response?.data?.error || err.message));
+      setError(
+        "Failed to add movie: " + (err.response?.data?.error || err.message)
+      );
     }
   };
 
@@ -276,7 +299,9 @@ const AdminDashboard = () => {
     e.preventDefault();
     const { title, status, posterImageFile, backdropImageFile } = newTvSeries;
     if (!title || !status || !posterImageFile || !backdropImageFile) {
-      setError("Vui lòng điền đầy đủ thông tin: Title, Status, Poster Image, và Backdrop Image!");
+      setError(
+        "Vui lòng điền đầy đủ thông tin: Title, Status, Poster Image, và Backdrop Image!"
+      );
       return;
     }
 
@@ -286,7 +311,8 @@ const AdminDashboard = () => {
     uploadData.append("Overview", newTvSeries.overview || "");
     newTvSeries.genres.forEach((genre) => uploadData.append("Genres", genre));
     uploadData.append("Status", newTvSeries.status);
-    if (newTvSeries.releaseDate) uploadData.append("ReleaseDate", newTvSeries.releaseDate);
+    if (newTvSeries.releaseDate)
+      uploadData.append("ReleaseDate", newTvSeries.releaseDate);
     uploadData.append("Studio", newTvSeries.studio || "");
     uploadData.append("Director", newTvSeries.director || "");
     uploadData.append("PosterImageFile", newTvSeries.posterImageFile);
@@ -294,22 +320,20 @@ const AdminDashboard = () => {
     uploadData.append("Actors", newTvSeries.actors || "");
 
     try {
-      const response = await api.post(
-        "/api/tvseries/create",
-        uploadData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.total > 0) {
-              const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-              setUploadProgress(percent);
-            }
-          },
-        }
-      );
+      const response = await api.post("/api/tvseries/create", uploadData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total > 0) {
+            const percent = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            setUploadProgress(percent);
+          }
+        },
+      });
 
       setTvSeries([...tvSeries, response.data]);
       setNewTvSeries({
@@ -335,7 +359,9 @@ const AdminDashboard = () => {
         confirmButtonColor: "#facc15",
       });
     } catch (err) {
-      setError("Failed to add TV series: " + (err.response?.data?.error || err.message));
+      setError(
+        "Failed to add TV series: " + (err.response?.data?.error || err.message)
+      );
     }
   };
 
@@ -343,7 +369,9 @@ const AdminDashboard = () => {
     e.preventDefault();
     const { tvSeriesId, episodeNumber, hlsZipFile } = newEpisode;
     if (!tvSeriesId || !episodeNumber || !hlsZipFile) {
-      setError("Vui lòng điền đầy đủ thông tin: TV Series, Episode Number, và HLS Zip File!");
+      setError(
+        "Vui lòng điền đầy đủ thông tin: TV Series, Episode Number, và HLS Zip File!"
+      );
       return;
     }
 
@@ -365,7 +393,9 @@ const AdminDashboard = () => {
           },
           onUploadProgress: (progressEvent) => {
             if (progressEvent.total > 0) {
-              const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              const percent = Math.round(
+                (progressEvent.loaded * 100) / progressEvent.total
+              );
               setUploadProgress(percent);
             }
           },
@@ -390,7 +420,9 @@ const AdminDashboard = () => {
         confirmButtonColor: "#facc15",
       });
     } catch (err) {
-      setError("Failed to add episode: " + (err.response?.data?.error || err.message));
+      setError(
+        "Failed to add episode: " + (err.response?.data?.error || err.message)
+      );
     }
   };
 
@@ -411,7 +443,9 @@ const AdminDashboard = () => {
         confirmButtonColor: "#facc15",
       });
     } catch (err) {
-      setError("Failed to delete movie: " + (err.response?.data?.error || err.message));
+      setError(
+        "Failed to delete movie: " + (err.response?.data?.error || err.message)
+      );
     }
   };
 
@@ -432,16 +466,25 @@ const AdminDashboard = () => {
         confirmButtonColor: "#facc15",
       });
     } catch (err) {
-      setError("Failed to delete TV series: " + (err.response?.data?.error || err.message));
+      setError(
+        "Failed to delete TV series: " +
+          (err.response?.data?.error || err.message)
+      );
     }
   };
 
   const handleEditMovie = (movie) => {
     setEditMovie(movie);
     setUpdatedMovie({
+      id: movie.id,
       title: movie.title || "",
       overview: movie.overview || "",
-      genres: movie.genres || "",
+      genres:
+        typeof movie.genres === "string"
+          ? movie.genres
+          : Array.isArray(movie.genres)
+          ? movie.genres.join(", ")
+          : "",
       status: movie.status || "",
       releaseDate: formatDateForInput(movie.releaseDate),
       studio: movie.studio || "",
@@ -450,6 +493,7 @@ const AdminDashboard = () => {
       backdropUrl: movie.backdropUrl || "",
       videoUrl: movie.videoUrl || "",
       trailerUrl: movie.trailerUrl || "",
+      actors: movie.actors ? [...movie.actors] : [], // Sao chép danh sách ActorDTO
     });
   };
 
@@ -466,61 +510,62 @@ const AdminDashboard = () => {
       posterUrl: series.posterUrl || "",
       backdropUrl: series.backdropUrl || "",
       trailerUrl: series.trailerUrl || "",
-      actors: series.actors || [],
+      actors: Array.isArray(series.actors) ? [...series.actors] : [],
     });
   };
 
-  const handleUpdateMovie = async (e) => {
-    e.preventDefault();
-    if (!editMovie) return;
+ const handleUpdateMovie = async (e) => {
+  e.preventDefault();
+  if (!editMovie) return;
 
-    const formattedData = {
-      ...updatedMovie,
-      releaseDate: updatedMovie.releaseDate ? new Date(updatedMovie.releaseDate).toISOString() : null,
-    };
-
-    try {
-      await api.put(
-        `/api/movies/${editMovie.id}`,
-        formattedData,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        }
-      );
-      setMovies(
-        movies.map((movie) =>
-          movie.id === editMovie.id ? { ...movie, ...formattedData } : movie
-        )
-      );
-      setEditMovie(null);
-      setUpdatedMovie({
-        title: "",
-        overview: "",
-        genres: "",
-        status: "",
-        releaseDate: "",
-        studio: "",
-        director: "",
-        posterUrl: "",
-        backdropUrl: "",
-        videoUrl: "",
-        trailerUrl: "",
-      });
-      setError(null);
-      Swal.fire({
-        title: "Thành công!",
-        text: "Cập nhật phim thành công!",
-        icon: "success",
-        background: "#1f2937",
-        color: "#fff",
-        confirmButtonColor: "#facc15",
-      });
-    } catch (err) {
-      setError("Failed to update movie: " + (err.response?.data?.error || err.message));
-    }
+  const formattedData = {
+    ...updatedMovie,
+    releaseDate: updatedMovie.releaseDate ? new Date(updatedMovie.releaseDate).toISOString() : null,
+    actors: updatedMovie.actors.map((actor) => ({
+      Id: actor.id || 0, // Sử dụng id (chữ thường) từ dữ liệu frontend
+      Name: actor.name || "", // Chuyển thành Name (viết hoa) để khớp với backend
+    })),
   };
+
+  try {
+    await api.put(`/api/movies/${editMovie.id}`, formattedData, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+      },
+    });
+    setMovies(
+      movies.map((movie) =>
+        movie.id === editMovie.id ? { ...movie, ...formattedData } : movie
+      )
+    );
+    setEditMovie(null);
+    setUpdatedMovie({
+      title: "",
+      overview: "",
+      genres: "",
+      status: "",
+      releaseDate: "",
+      studio: "",
+      director: "",
+      posterUrl: "",
+      backdropUrl: "",
+      videoUrl: "",
+      trailerUrl: "",
+      actors: [], // Đặt lại actors thành mảng rỗng
+    });
+    setError(null);
+    Swal.fire({
+      title: "Thành công!",
+      text: "Cập nhật phim thành công!",
+      icon: "success",
+      background: "#1f2937",
+      color: "#fff",
+      confirmButtonColor: "#facc15",
+    });
+  } catch (err) {
+    setError("Failed to update movie: " + (err.response?.data?.error || err.message));
+  }
+};
 
   const handleUpdateTvSeries = async (e) => {
     e.preventDefault();
@@ -528,10 +573,12 @@ const AdminDashboard = () => {
 
     const formattedData = {
       ...updatedTvSeries,
-      releaseDate: updatedTvSeries.releaseDate ? new Date(updatedTvSeries.releaseDate).toISOString() : null,
+      releaseDate: updatedTvSeries.releaseDate
+        ? new Date(updatedTvSeries.releaseDate).toISOString()
+        : null,
       actors: updatedTvSeries.actors.map((actor) => ({
-        id: actor.id || 0,
-        name: actor.name || actor,
+        Id: actor.id || 0,
+        Name: actor.name || actor,
       })),
     };
 
@@ -548,7 +595,9 @@ const AdminDashboard = () => {
 
       setTvSeries(
         tvSeries.map((series) =>
-          series.id === editTvSeries.id ? { ...series, ...response.data } : series
+          series.id === editTvSeries.id
+            ? { ...series, ...response.data }
+            : series
         )
       );
       setEditTvSeries(null);
@@ -575,7 +624,10 @@ const AdminDashboard = () => {
         confirmButtonColor: "#facc15",
       });
     } catch (err) {
-      setError("Failed to update TV series: " + (err.response?.data?.error || err.message));
+      setError(
+        "Failed to update TV series: " +
+          (err.response?.data?.error || err.message)
+      );
     }
   };
 

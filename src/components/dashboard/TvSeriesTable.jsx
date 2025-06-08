@@ -1,19 +1,39 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 
-const MovieTable = ({
-  movies,
-  editMovie,
-  updatedMovie,
-  setUpdatedMovie,
-  handleEditMovie,
-  handleUpdateMovie,
-  handleDeleteMovie,
+const TvSeriesTable = ({
+  tvSeries,
+  editTvSeries,
+  updatedTvSeries,
+  setUpdatedTvSeries,
+  handleEditTvSeries,
+  handleUpdateTvSeries,
+  handleDeleteTvSeries,
   formatDateForInput,
-  setEditMovie,
+  setEditTvSeries,
 }) => {
+  // State tạm thời để lưu chuỗi người dùng nhập vào input actors
+  const [actorInput, setActorInput] = useState("");
+
+  // Khi editTvSeries thay đổi, cập nhật actorInput từ updatedTvSeries.actors
+  useEffect(() => {
+    if (editTvSeries) {
+      setActorInput(updatedTvSeries.actors.map((actor) => actor.name || "").join(", "));
+    }
+  }, [editTvSeries, updatedTvSeries.actors]);
+
+  // Hàm đồng bộ actorInput với updatedTvSeries.actors (gọi khi mất focus hoặc submit)
+  const syncActors = () => {
+    const names = actorInput.split(",").map((name) => name.trim()).filter((name) => name);
+    const newActors = names.map((name) => {
+      const existingActor = updatedTvSeries.actors.find((a) => (a.name || "").toLowerCase() === name.toLowerCase());
+      return existingActor || { name }; // Giữ id nếu tồn tại, nếu không tạo mới với name
+    });
+    setUpdatedTvSeries({ ...updatedTvSeries, actors: newActors });
+  };
+
   return (
     <div>
-      <h2 className="text-2xl font-semibold mb-4">Manage Movies</h2>
+      <h2 className="text-2xl font-semibold mb-4">Manage TV Series</h2>
       <div className="overflow-x-auto">
         <table className="min-w-full bg-gray-800 rounded-lg">
           <thead>
@@ -25,20 +45,20 @@ const MovieTable = ({
             </tr>
           </thead>
           <tbody>
-            {movies.map((movie) => (
-              <tr key={movie.id} className="border-t border-gray-700">
-                <td className="px-4 py-2">{movie.title}</td>
-                <td className="px-4 py-2">{movie.status}</td>
-                <td className="px-4 py-2">{formatDateForInput(movie.releaseDate)}</td>
+            {tvSeries.map((series) => (
+              <tr key={series.id} className="border-t border-gray-700">
+                <td className="px-4 py-2">{series.title}</td>
+                <td className="px-4 py-2">{series.status}</td>
+                <td className="px-4 py-2">{formatDateForInput(series.releaseDate)}</td>
                 <td className="px-4 py-2">
                   <button
-                    onClick={() => handleEditMovie(movie)}
+                    onClick={() => handleEditTvSeries(series)}
                     className="px-3 py-1 bg-blue-600 rounded-lg hover:bg-blue-500 mr-2"
                   >
                     Edit
                   </button>
                   <button
-                    onClick={() => handleDeleteMovie(movie.id)}
+                    onClick={() => handleDeleteTvSeries(series.id)}
                     className="px-3 py-1 bg-red-600 rounded-lg hover:bg-red-500"
                   >
                     Delete
@@ -50,16 +70,16 @@ const MovieTable = ({
         </table>
       </div>
 
-      {editMovie && (
+      {editTvSeries && (
         <div className="mt-6">
-          <h3 className="text-xl font-semibold mb-4">Edit Movie: {editMovie.title}</h3>
-          <form onSubmit={handleUpdateMovie} className="space-y-4">
+          <h3 className="text-xl font-semibold mb-4">Edit TV Series: {editTvSeries.title}</h3>
+          <form onSubmit={(e) => { syncActors(); handleUpdateTvSeries(e); }} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-1">Title</label>
               <input
                 type="text"
-                value={updatedMovie.title}
-                onChange={(e) => setUpdatedMovie({ ...updatedMovie, title: e.target.value })}
+                value={updatedTvSeries.title}
+                onChange={(e) => setUpdatedTvSeries({ ...updatedTvSeries, title: e.target.value })}
                 className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:border-yellow-500"
                 required
               />
@@ -67,8 +87,8 @@ const MovieTable = ({
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-1">Overview</label>
               <textarea
-                value={updatedMovie.overview}
-                onChange={(e) => setUpdatedMovie({ ...updatedMovie, overview: e.target.value })}
+                value={updatedTvSeries.overview}
+                onChange={(e) => setUpdatedTvSeries({ ...updatedTvSeries, overview: e.target.value })}
                 className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:border-yellow-500"
                 rows="3"
               />
@@ -77,21 +97,32 @@ const MovieTable = ({
               <label className="block text-sm font-medium text-gray-400 mb-1">Genres</label>
               <input
                 type="text"
-                value={updatedMovie.genres}
-                onChange={(e) => setUpdatedMovie({ ...updatedMovie, genres: e.target.value })}
+                value={updatedTvSeries.genres}
+                onChange={(e) => setUpdatedTvSeries({ ...updatedTvSeries, genres: e.target.value })}
                 className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:border-yellow-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">Actors (comma-separated names)</label>
+              <input
+                type="text"
+                value={actorInput}
+                onChange={(e) => setActorInput(e.target.value)}
+                onBlur={syncActors} // Đồng bộ khi input mất focus
+                className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:border-yellow-500"
+                placeholder="e.g., Actor 1, Actor 2"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-1">Status</label>
               <select
-                value={updatedMovie.status}
-                onChange={(e) => setUpdatedMovie({ ...updatedMovie, status: e.target.value })}
+                value={updatedTvSeries.status}
+                onChange={(e) => setUpdatedTvSeries({ ...updatedTvSeries, status: e.target.value })}
                 className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:border-yellow-500"
                 required
               >
-                <option value="Upcoming">Upcoming</option>
-                <option value="Released">Released</option>
+                <option value="Ongoing">Ongoing</option>
+                <option value="Completed">Completed</option>
                 <option value="Canceled">Canceled</option>
               </select>
             </div>
@@ -99,8 +130,8 @@ const MovieTable = ({
               <label className="block text-sm font-medium text-gray-400 mb-1">Release Date</label>
               <input
                 type="date"
-                value={updatedMovie.releaseDate}
-                onChange={(e) => setUpdatedMovie({ ...updatedMovie, releaseDate: e.target.value })}
+                value={updatedTvSeries.releaseDate}
+                onChange={(e) => setUpdatedTvSeries({ ...updatedTvSeries, releaseDate: e.target.value })}
                 className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:border-yellow-500"
               />
             </div>
@@ -108,8 +139,8 @@ const MovieTable = ({
               <label className="block text-sm font-medium text-gray-400 mb-1">Studio</label>
               <input
                 type="text"
-                value={updatedMovie.studio}
-                onChange={(e) => setUpdatedMovie({ ...updatedMovie, studio: e.target.value })}
+                value={updatedTvSeries.studio}
+                onChange={(e) => setUpdatedTvSeries({ ...updatedTvSeries, studio: e.target.value })}
                 className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:border-yellow-500"
               />
             </div>
@@ -117,8 +148,8 @@ const MovieTable = ({
               <label className="block text-sm font-medium text-gray-400 mb-1">Director</label>
               <input
                 type="text"
-                value={updatedMovie.director}
-                onChange={(e) => setUpdatedMovie({ ...updatedMovie, director: e.target.value })}
+                value={updatedTvSeries.director}
+                onChange={(e) => setUpdatedTvSeries({ ...updatedTvSeries, director: e.target.value })}
                 className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:border-yellow-500"
               />
             </div>
@@ -126,8 +157,8 @@ const MovieTable = ({
               <label className="block text-sm font-medium text-gray-400 mb-1">Poster URL</label>
               <input
                 type="text"
-                value={updatedMovie.posterUrl}
-                onChange={(e) => setUpdatedMovie({ ...updatedMovie, posterUrl: e.target.value })}
+                value={updatedTvSeries.posterUrl}
+                onChange={(e) => setUpdatedTvSeries({ ...updatedTvSeries, posterUrl: e.target.value })}
                 className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:border-yellow-500"
               />
             </div>
@@ -135,17 +166,8 @@ const MovieTable = ({
               <label className="block text-sm font-medium text-gray-400 mb-1">Backdrop URL</label>
               <input
                 type="text"
-                value={updatedMovie.backdropUrl}
-                onChange={(e) => setUpdatedMovie({ ...updatedMovie, backdropUrl: e.target.value })}
-                className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:border-yellow-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">Video URL</label>
-              <input
-                type="text"
-                value={updatedMovie.videoUrl}
-                onChange={(e) => setUpdatedMovie({ ...updatedMovie, videoUrl: e.target.value })}
+                value={updatedTvSeries.backdropUrl}
+                onChange={(e) => setUpdatedTvSeries({ ...updatedTvSeries, backdropUrl: e.target.value })}
                 className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:border-yellow-500"
               />
             </div>
@@ -153,8 +175,8 @@ const MovieTable = ({
               <label className="block text-sm font-medium text-gray-400 mb-1">Trailer URL</label>
               <input
                 type="text"
-                value={updatedMovie.trailerUrl}
-                onChange={(e) => setUpdatedMovie({ ...updatedMovie, trailerUrl: e.target.value })}
+                value={updatedTvSeries.trailerUrl}
+                onChange={(e) => setUpdatedTvSeries({ ...updatedTvSeries, trailerUrl: e.target.value })}
                 className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:border-yellow-500"
               />
             </div>
@@ -162,10 +184,10 @@ const MovieTable = ({
               type="submit"
               className="px-4 py-2 bg-green-500 rounded-lg hover:bg-green-400"
             >
-              Update Movie
+              Update TV Series
             </button>
             <button
-              onClick={() => setEditMovie(null)}
+              onClick={() => setEditTvSeries(null)}
               className="ml-2 px-4 py-2 bg-gray-500 rounded-lg hover:bg-gray-400"
             >
               Cancel
@@ -177,4 +199,4 @@ const MovieTable = ({
   );
 };
 
-export default MovieTable;
+export default TvSeriesTable;
