@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import logo from "../assets/logo.png";
-import userImg from "../assets/user.png";
+import logo from "../../assets/logo.png";
+import userImg from "../../assets/user.png";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { IoSearchOutline } from "react-icons/io5";
-import { navigation } from "../constants/navigation";
+import { navigation } from "../../constants/navigation";
 import { useSelector, useDispatch } from "react-redux";
-import { logoutUser } from "../store/authSlice";
+import { logoutUser } from "../../store/authSlice";
 import { jwtDecode } from "jwt-decode";
 
 const Header = () => {
@@ -43,7 +43,7 @@ const Header = () => {
         setIsAdmin(
           decodedToken[
             "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
-          ] === "admin"
+          ] === "Admin"
         );
       } catch (error) {
         console.error("Invalid token:", error);

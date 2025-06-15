@@ -1,5 +1,5 @@
 import React, { useRef } from 'react'
-import Card from './Card'
+import Card from './common/Card'
 import { FaAngleLeft, FaAngleRight, FaStar } from "react-icons/fa";
 
 const HorizontalScrollCard = ({ data = [], heading, trending, media_type }) => {

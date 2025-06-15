@@ -1,7 +1,7 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import Card from "../components/Card";
+import Card from "../components/common/Card";
 
 const SearchPage = () => {
   const location = useLocation();
@@ -50,6 +50,10 @@ const SearchPage = () => {
   //   window.addEventListener("scroll", handleScroll);
   //   return () => window.removeEventListener("scroll", handleScroll);
   // }, [page, totalPages, loading]);
+
+useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location]);
 
   const handleSearch = (e) => {
     const value = e.target.value;

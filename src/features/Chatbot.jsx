@@ -3,9 +3,8 @@ import api from '../api/api';
 import { IoSendSharp } from 'react-icons/io5';
 
 const Chatbot = () => {
-  // Khởi tạo messages từ localStorage nếu có, nếu không thì dùng giá trị mặc định
   const [messages, setMessages] = useState(() => {
-    const savedMessages = localStorage.getItem('chatHistory');
+    const savedMessages = sessionStorage.getItem('chatHistory'); // Sử dụng sessionStorage
     return savedMessages
       ? JSON.parse(savedMessages)
       : [
@@ -24,10 +23,12 @@ const Chatbot = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Lưu messages vào localStorage mỗi khi messages thay đổi
+  // Lưu messages vào sessionStorage mỗi khi messages thay đổi
   useEffect(() => {
-    localStorage.setItem('chatHistory', JSON.stringify(messages));
+    sessionStorage.setItem('chatHistory', JSON.stringify(messages));
   }, [messages]);
+
+  // Không cần sự kiện beforeunload nữa vì sessionStorage tự động xử lý khi đóng tab/trình duyệt
 
   const handleSendMessage = async () => {
     if (!input.trim()) return;

@@ -76,6 +76,24 @@ export const logoutUser = createAsyncThunk(
   }
 );
 
+// Thêm action setToken
+export const setToken = createAsyncThunk(
+  'auth/setToken',
+  async (token, { rejectWithValue }) => {
+    try {
+      if (!token) {
+        throw new Error('Token is required');
+      }
+      localStorage.setItem('accessToken', token);
+      console.log('Token set in localStorage:', { accessToken: token });
+      return { token };
+    } catch (error) {
+      console.error('Set token error:', error.message);
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
@@ -124,6 +142,20 @@ const authSlice = createSlice({
         state.loading = false;
       })
       .addCase(logoutUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Xử lý setToken
+      .addCase(setToken.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(setToken.fulfilled, (state, action) => {
+        state.loading = false;
+        state.token = action.payload.token;
+        state.user = { email: null }; // Cập nhật user nếu cần email từ token
+      })
+      .addCase(setToken.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

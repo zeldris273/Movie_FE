@@ -1,15 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import api from "../api/api";
-import { MdOutlineForward5 } from "react-icons/md";
-import { MdReplay5 } from "react-icons/md";
-import { IoMdSettings } from "react-icons/io";
-import { RiVolumeMuteFill } from "react-icons/ri";
-import { FaVolumeUp } from "react-icons/fa";
-import { MdFullscreen, MdFullscreenExit } from "react-icons/md";
-import Hls from "hls.js";
-import { MdSignalCellularAlt, MdSchedule, MdClose } from "react-icons/md";
 import { jwtDecode } from "jwt-decode";
+import VideoFrame from "../components/frame/VideoFrame";
 
 const MoviePlayer = () => {
   const { id, title, episodeNumber } = useParams();
@@ -25,13 +18,13 @@ const MoviePlayer = () => {
   const [replyText, setReplyText] = useState("");
   const [error, setError] = useState(null);
   const [menuOpen, setMenuOpen] = useState(null);
-  const [qualityLevels, setQualityLevels] = useState([]);
-  const [selectedQuality, setSelectedQuality] = useState(-1);
-  const [isPlaying, setIsPlaying] = useState(false); // Chỉ đổi khi người dùng nhấp
+  const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [qualityLevels, setQualityLevels] = useState([]);
+  const [selectedQuality, setSelectedQuality] = useState(-1);
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [isMuted, setIsMuted] = useState(false);
   const [settingsTab, setSettingsTab] = useState("quality");
@@ -46,23 +39,20 @@ const MoviePlayer = () => {
 
   const mediaType = location.pathname.includes("movies") ? "movie" : "tv";
 
-  // Tạo key duy nhất để lưu thời gian dựa trên id và episodeNumber (nếu có)
   const getStorageKey = () => {
     return mediaType === "movie"
       ? `watchTime_${id}`
       : `watchTime_${id}_episode_${episodeNumber}`;
   };
 
-  // Kiểm tra thời gian xem từ localStorage khi component mount
   useEffect(() => {
     const savedTime = localStorage.getItem(getStorageKey());
     if (savedTime) {
       setSavedTime(parseFloat(savedTime));
-      setShowResumePrompt(true); // Hiển thị thông báo
+      setShowResumePrompt(true);
     }
   }, [id, episodeNumber, mediaType]);
 
-  // Xử lý khi người dùng chọn tiếp tục xem
   const handleResume = () => {
     const video = videoRef.current;
     if (video && savedTime) {
@@ -77,7 +67,6 @@ const MoviePlayer = () => {
     setShowResumePrompt(false);
   };
 
-  // Xử lý khi người dùng chọn xem từ đầu
   const handleStartOver = () => {
     localStorage.removeItem(getStorageKey());
     setCurrentTime(0);
@@ -118,6 +107,25 @@ const MoviePlayer = () => {
     window.scrollTo(0, 0);
   }, [location]);
 
+  const fetchComments = async () => {
+    try {
+      const episodeId = mediaType === "tv" ? getEpisodeId() : null;
+      const response = await api.get("/api/comments", {
+        params: {
+          tvSeriesId: mediaType === "tv" ? id : null,
+          movieId: mediaType === "movie" ? id : null,
+          episodeId: episodeId,
+        },
+      });
+      setComments(response.data);
+    } catch (err) {
+      setError(
+        "Failed to load comments: " +
+          (err.response?.data?.error || err.message)
+      );
+    }
+  };
+
   useEffect(() => {
     const fetchVideoUrl = async () => {
       try {
@@ -125,12 +133,9 @@ const MoviePlayer = () => {
           mediaType === "movie"
             ? `/api/movies/${id}/${title}/watch`
             : `/api/tvseries/${id}/${title}/episode/${episodeNumber}/watch`;
-        console.log("Fetching video URL from:", endpoint);
         const response = await api.get(endpoint);
-        console.log("Video URL received:", response.data.videoUrl);
         setVideoUrl(response.data.videoUrl);
       } catch (err) {
-        console.error("Error fetching video URL:", err.response || err);
         if (err.response?.status === 401) {
           setError("Your session has expired. Please log in again.");
         } else {
@@ -158,29 +163,8 @@ const MoviePlayer = () => {
           setError("No seasons found for this series.");
         }
       } catch (err) {
-        console.error("Error fetching episodes:", err);
         setError(
           "Failed to load episodes: " +
-            (err.response?.data?.error || err.message)
-        );
-      }
-    };
-
-    const fetchComments = async () => {
-      try {
-        const episodeId = mediaType === "tv" ? getEpisodeId() : null;
-        const response = await api.get("/api/comments", {
-          params: {
-            tvSeriesId: mediaType === "tv" ? id : null,
-            movieId: mediaType === "movie" ? id : null,
-            episodeId: episodeId,
-          },
-        });
-        setComments(response.data);
-      } catch (err) {
-        console.error("Error fetching comments:", err);
-        setError(
-          "Failed to load comments: " +
             (err.response?.data?.error || err.message)
         );
       }
@@ -192,144 +176,13 @@ const MoviePlayer = () => {
   }, [id, title, episodeNumber, mediaType]);
 
   const getEpisodeId = () => {
-    if (mediaType !== "tv" || !episodeNumber || episodes.length === 0)
-      return null;
-
+    if (mediaType !== "tv" || !episodeNumber || episodes.length === 0) return null;
     const epNum = parseInt(episodeNumber.replace("episode-", "") || "0", 10);
     const episode = episodes.find(
       (ep) => (ep.episode_number || ep.episodeNumber) === epNum
     );
     return episode ? episode.id : null;
   };
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !videoUrl) {
-      console.log("Video or URL not ready:", { video, videoUrl });
-      return;
-    }
-
-    console.log("Video element dimensions:", {
-      width: video.offsetWidth,
-      height: video.offsetHeight,
-    });
-
-    if (Hls.isSupported()) {
-      console.log("HLS supported, loading source:", videoUrl);
-      const hls = new Hls();
-      hls.loadSource(videoUrl);
-      hls.attachMedia(video);
-
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        console.log("Manifest parsed, quality levels:", hls.levels);
-        setQualityLevels(hls.levels);
-        setSelectedQuality(hls.currentLevel);
-        // Không tự động play, chờ người dùng nhấp
-      });
-
-      hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
-        console.log("Switched to quality level:", data.level);
-        setSelectedQuality(data.level);
-      });
-
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        console.error("HLS Error:", event, data);
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              setError("Network error: Failed to load HLS stream.");
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              setError("Media error: Failed to play HLS stream.");
-              break;
-            default:
-              setError("An error occurred while playing the HLS stream.");
-              break;
-          }
-        }
-      });
-
-      if (videoRef.current) {
-        videoRef.current.hls = hls;
-      }
-
-      return () => {
-        if (videoRef.current && videoRef.current.hls) {
-          videoRef.current.hls.destroy();
-          videoRef.current.hls = null;
-        }
-      };
-    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      console.log("Using native HLS:", videoUrl);
-      video.src = videoUrl;
-      // Không tự động play, chờ người dùng nhấp
-    } else {
-      setError("HLS is not supported in this browser.");
-    }
-  }, [videoUrl]);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const updateTime = () => {
-      setCurrentTime(video.currentTime);
-      localStorage.setItem(getStorageKey(), video.currentTime.toString());
-    };
-
-    const setVideoDuration = () => {
-      setDuration(video.duration || 0);
-    };
-
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
-    const handleEnded = () => {
-      setIsPlaying(false);
-      localStorage.removeItem(getStorageKey());
-    };
-
-    video.addEventListener("timeupdate", updateTime);
-    video.addEventListener("loadedmetadata", setVideoDuration);
-    video.addEventListener("play", handlePlay);
-    video.addEventListener("pause", handlePause);
-    video.addEventListener("ended", handleEnded);
-
-    video.playbackRate = playbackRate;
-    video.muted = isMuted;
-
-    return () => {
-      video.removeEventListener("timeupdate", updateTime);
-      video.removeEventListener("loadedmetadata", setVideoDuration);
-      video.removeEventListener("play", handlePlay);
-      video.removeEventListener("pause", handlePause);
-      video.removeEventListener("ended", handleEnded);
-    };
-  }, [videoUrl, playbackRate, isMuted]);
-
-  useEffect(() => {
-    const handleFullScreenChange = () => {
-      setIsFullScreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener("fullscreenchange", handleFullScreenChange);
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullScreenChange);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (showSettingsMenu) {
-      settingsMenuTimeoutRef.current = setTimeout(() => {
-        setShowSettingsMenu(false);
-      }, 3000);
-    }
-
-    return () => {
-      if (settingsMenuTimeoutRef.current) {
-        clearTimeout(settingsMenuTimeoutRef.current);
-      }
-    };
-  }, [showSettingsMenu]);
 
   const handlePlayPause = () => {
     const video = videoRef.current;
@@ -412,20 +265,10 @@ const MoviePlayer = () => {
         })
         .then(() => {
           setIsFullScreen(true);
-          const video = videoRef.current;
-          if (video) {
-            video.style.width = "100%";
-            video.style.height = "100%";
-          }
         });
     } else {
       document.exitFullscreen().then(() => {
         setIsFullScreen(false);
-        const video = videoRef.current;
-        if (video) {
-          video.style.width = "";
-          video.style.height = "";
-        }
       });
     }
   };
@@ -489,10 +332,13 @@ const MoviePlayer = () => {
         episodeId: episodeId,
         commentText: newComment,
       });
-      setComments([...comments, { ...response.data, replies: [] }]);
+      setComments((prevComments) => [
+        ...prevComments,
+        { ...response.data, replies: [] },
+      ]);
       setNewComment("");
+      await fetchComments();
     } catch (err) {
-      console.error("Error adding comment:", err.response?.data || err.message);
       setError(
         `Failed to add comment: ${
           err.response?.data?.error || err.response?.statusText || err.message
@@ -517,21 +363,17 @@ const MoviePlayer = () => {
         commentText: replyText,
       });
 
-      const updatedComments = comments.map((comment) => {
-        if (comment.id === parentCommentId) {
-          return {
-            ...comment,
-            replies: [...comment.replies, response.data],
-          };
-        }
-        return comment;
-      });
-
-      setComments(updatedComments);
+      setComments((prevComments) =>
+        prevComments.map((comment) =>
+          comment.id === parentCommentId
+            ? { ...comment, replies: [...comment.replies, response.data] }
+            : comment
+        )
+      );
       setReplyText("");
       setReplyCommentId(null);
+      await fetchComments();
     } catch (err) {
-      console.error("Error replying to comment:", err);
       setError(
         "Failed to reply to comment: " +
           (err.response?.data?.error || err.response?.statusText || err.message)
@@ -573,7 +415,6 @@ const MoviePlayer = () => {
       setEditCommentId(null);
       setEditCommentText("");
     } catch (err) {
-      console.error("Error updating comment:", err);
       setError(
         "Failed to update comment: " +
           (err.response?.data?.error || err.response?.statusText || err.message)
@@ -598,7 +439,6 @@ const MoviePlayer = () => {
       setComments(removeComment(comments));
       setMenuOpen(null);
     } catch (err) {
-      console.error("Error deleting comment:", err);
       setError(
         "Failed to delete comment: " +
           (err.response?.data?.error || err.response?.statusText || err.message)
@@ -798,209 +638,43 @@ const MoviePlayer = () => {
         </div>
       )}
 
-      <div
-        ref={containerRef}
-        className={`container mx-auto p-2 sm:p-4 my-2 sm:my-10 ${
-          isFullScreen ? "fixed top-0 left-0 w-screen h-screen" : ""
-        }`}
-        style={{ width: "80%", height: "auto", margin: "0 auto" }}
-        onMouseMove={handleMouseMove}
-      >
-        <div
-          className="relative w-full"
-          style={{ paddingTop: isFullScreen ? "0" : "56.25%" }}
-        >
-          <video
-            ref={videoRef}
-            className="absolute top-0 left-0 w-full h-full rounded-lg shadow-lg"
-            onClick={handlePlayPause}
-            controls={false}
-            disablePictureInPicture
-            onContextMenu={(e) => e.preventDefault()}
-            onKeyDown={(e) => {
-              if (e.key === "ArrowLeft") {
-                handleSkipBackward(); 
-              } else if (e.key === "ArrowRight") {
-                handleSkipForward(); 
-              }
-            }}
-            tabIndex={0}
-          />
-
-          {showControls && (
-            <div
-              className={`absolute bottom-0 left-0 right-0 ${
-                isFullScreen ? "p-2 sm:p-4" : "p-1 sm:p-2"
-              } bg-transparent`}
-            >
-              <div className="flex flex-col sm:flex-row items-center space-y-1 sm:space-y-0 sm:space-x-2">
-                <div className="text-white text-xs sm:text-sm">
-                  {formatTime(currentTime)} / {formatTime(duration)}
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={duration ? (currentTime / duration) * 100 : 0}
-                  onChange={handleSeek}
-                  className="flex-1 h-1 bg-transparent rounded-full appearance-none cursor-pointer"
-                  style={{
-                    background: `linear-gradient(to right, #facc15 ${
-                      duration ? (currentTime / duration) * 100 : 0
-                    }%, transparent ${
-                      duration ? (currentTime / duration) * 100 : 0
-                    }%)`,
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center justify-between mt-1 sm:mt-2">
-                <div className="flex items-center space-x-1 sm:space-x-2">
-                  <button
-                    onClick={handlePlayPause}
-                    className="text-white text-lg sm:text-xl hover:bg-transparent p-1 rounded-full"
-                  >
-                    {isPlaying ? (
-                      <svg
-                        className="w-4 sm:w-6 h-4 sm:h-6"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M6 4h4v16H6zm8 0h4v16h-4z" />
-                      </svg>
-                    ) : (
-                      <svg
-                        className="w-4 sm:w-6 h-4 sm:h-6"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
-                    )}
-                  </button>
-                  <button
-                    onClick={toggleMute}
-                    className="text-white text-lg sm:text-xl hover:bg-transparent p-1 rounded-full"
-                  >
-                    {isMuted ? <RiVolumeMuteFill /> : <FaVolumeUp />}
-                  </button>
-                </div>
-                <div className="flex items-center space-x-1 sm:space-x-2">
-                  <div className="flex gap-1 sm:gap-2">
-                    <button
-                      onClick={handleSkipBackward}
-                      className="text-white hover:bg-transparent p-1 rounded-full text-lg sm:text-xl"
-                    >
-                      <MdReplay5 />
-                    </button>
-                    <button
-                      onClick={handleSkipForward}
-                      className="text-white hover:bg-transparent p-1 rounded-full text-lg sm:text-xl"
-                    >
-                      <MdOutlineForward5 />
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <button
-                      onClick={toggleSettingsMenu}
-                      className="text-white hover:bg-transparent p-1 rounded-full text-lg sm:text-xl"
-                    >
-                      <IoMdSettings />
-                    </button>
-                    {showSettingsMenu && (
-                      <div className="absolute bottom-8 sm:bottom-12 right-0 w-40 sm:w-56 bg-[#1e1e1e] text-white rounded-md shadow-lg z-50 overflow-hidden">
-                        <div className="flex items-center justify-between px-2 sm:px-3 py-1 sm:py-2 bg-black">
-                          <div className="flex space-x-2 sm:space-x-4">
-                            <button
-                              onClick={() => switchSettingsTab("quality")}
-                              className={`flex items-center text-xs sm:text-sm ${
-                                settingsTab === "quality"
-                                  ? "border-b-2 border-white"
-                                  : "text-gray-400"
-                              }`}
-                            >
-                              <MdSignalCellularAlt className="text-base sm:text-lg mr-1" />
-                            </button>
-                            <button
-                              onClick={() => switchSettingsTab("speed")}
-                              className={`flex items-center text-xs sm:text-sm ${
-                                settingsTab === "speed"
-                                  ? "border-b-2 border-white"
-                                  : "text-gray-400"
-                              }`}
-                            >
-                              <MdSchedule className="text-base sm:text-lg" />
-                            </button>
-                          </div>
-                          <button
-                            onClick={() => setShowSettingsMenu(false)}
-                            className="text-gray-400 hover:text-white"
-                          >
-                            <MdClose className="text-base sm:text-xl" />
-                          </button>
-                        </div>
-
-                        <div className="py-1 sm:py-2 px-2 sm:px-3 space-y-0.5 sm:space-y-1 text-xs sm:text-sm bg-[#2b2b2b]">
-                          {settingsTab === "quality" && (
-                            <>
-                              <button
-                                onClick={() => handleQualityChange(-1)}
-                                className={`block w-full text-left px-1 sm:px-2 py-0.5 sm:py-1 rounded ${
-                                  selectedQuality === -1
-                                    ? "text-white font-bold"
-                                    : "text-gray-300"
-                                } hover:bg-gray-700`}
-                              >
-                                Auto
-                              </button>
-                              {qualityLevels.map((level, index) => (
-                                <button
-                                  key={index}
-                                  onClick={() => handleQualityChange(index)}
-                                  className={`block w-full text-left px-1 sm:px-2 py-0.5 sm:py-1 rounded ${
-                                    selectedQuality === index
-                                      ? "text-white font-bold"
-                                      : "text-gray-300"
-                                  } hover:bg-gray-700`}
-                                >
-                                  {level.height}p
-                                </button>
-                              ))}
-                            </>
-                          )}
-                          {settingsTab === "speed" && (
-                            <>
-                              {[0.5, 1.0, 1.5, 2.0].map((rate) => (
-                                <button
-                                  key={rate}
-                                  onClick={() => handlePlaybackRateChange(rate)}
-                                  className={`block w-full text-left px-1 sm:px-2 py-0.5 sm:py-1 rounded ${
-                                    playbackRate === rate
-                                      ? "text-white font-bold"
-                                      : "text-gray-300"
-                                  } hover:bg-gray-700`}
-                                >
-                                  {rate}x
-                                </button>
-                              ))}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={toggleFullScreen}
-                    className="text-white hover:bg-transparent p-1 rounded-full text-lg sm:text-2xl"
-                  >
-                    {isFullScreen ? <MdFullscreenExit /> : <MdFullscreen />}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      <VideoFrame
+        videoUrl={videoUrl}
+        isPlaying={isPlaying}
+        setIsPlaying={setIsPlaying}
+        currentTime={currentTime}
+        setCurrentTime={setCurrentTime}
+        duration={duration}
+        setDuration={setDuration}
+        showControls={showControls}
+        setShowControls={setShowControls}
+        showSettingsMenu={showSettingsMenu}
+        setShowSettingsMenu={setShowSettingsMenu}
+        qualityLevels={qualityLevels}
+        setQualityLevels={setQualityLevels}
+        selectedQuality={selectedQuality}
+        setSelectedQuality={setSelectedQuality}
+        playbackRate={playbackRate}
+        setPlaybackRate={setPlaybackRate}
+        isMuted={isMuted}
+        setIsMuted={setIsMuted}
+        settingsTab={settingsTab}
+        setSettingsTab={setSettingsTab}
+        isFullScreen={isFullScreen}
+        setIsFullScreen={setIsFullScreen}
+        onSeek={handleSeek}
+        onQualityChange={handleQualityChange}
+        onPlaybackRateChange={handlePlaybackRateChange}
+        onToggleMute={toggleMute}
+        onSkipForward={handleSkipForward}
+        onSkipBackward={handleSkipBackward}
+        onToggleFullScreen={toggleFullScreen}
+        onPlayPause={handlePlayPause}
+        formatTime={formatTime}
+        containerRef={containerRef}
+        videoRef={videoRef}
+        handleMouseMove={handleMouseMove}
+      />
 
       {mediaType === "tv" && (
         <div className="container mx-auto p-2 sm:p-4">
